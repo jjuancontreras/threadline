@@ -1,0 +1,7 @@
+.superpowers/
+.private-journal/
+node_modules/
+.env*
+dist/
+verify/screenshots/
+verify/report.json

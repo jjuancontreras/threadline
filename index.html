@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en" data-rescue="pending">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#05070c" />
+    <meta name="description" content="THREADLINE — a scroll-driven WebGL story. THREADRUNNER stops a runaway maglev train with luminous tethers after GANTRY severs the track." />
+    <title>THREADLINE</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2305070c'/%3E%3Cpath d='M4 26 L16 6 L28 26' stroke='%2333ffe0' stroke-width='3' fill='none'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <a class="skip" href="#story">Skip to the story text</a>
+    <canvas id="stage" aria-hidden="true"></canvas>
+
+    <div class="overlay" data-ui>
+      <div class="halftone" data-halftone aria-hidden="true"></div>
+      <div class="crossfade" data-crossfade aria-hidden="true"></div>
+      <div class="impact-words" data-impact-words aria-hidden="true"></div>
+
+      <header class="title" data-title>
+        <h1 class="title-word">THREADLINE</h1>
+        <p class="title-sub">One city. One runner. One line between them and the fall.</p>
+        <p class="title-cue">Scroll to begin <span aria-hidden="true">↓</span></p>
+      </header>
+
+      <div class="hud" aria-hidden="true">
+        <div class="hud-tag" data-chapter-tag>01 · PERCH</div>
+        <div class="hud-read"><span class="hud-k">SPD</span><span class="hud-v" data-speed>000</span><span class="hud-u">km/h</span></div>
+        <div class="hud-read"><span class="hud-k">ALT</span><span class="hud-v" data-alt>000</span><span class="hud-u">m</span></div>
+      </div>
+      <div class="hud-alert" data-alert hidden role="status">⚠ SEISMIC SPIKE · SECTOR 7 · HEAVY UNIT INBOUND</div>
+      <div class="hud-slowmo" data-slowmo hidden aria-hidden="true">TIME ×1.00</div>
+
+      <div class="rescue-meter" data-rescue-meter hidden>
+        <p class="rescue-call">TAP THE GLOWING ANCHORS</p>
+        <div class="rescue-row">
+          <span class="pips" aria-hidden="true"><i data-pip></i><i data-pip></i><i data-pip></i><i data-pip></i></span>
+          <span class="rescue-gap">EDGE <b data-gap>0.00 m</b></span>
+        </div>
+      </div>
+      <div class="anchors" data-anchors hidden></div>
+
+      <div class="saved" data-saved hidden role="status" aria-live="polite">
+        <span class="saved-word" aria-label="Train saved"><span class="saved-letter">T</span><span class="saved-letter">R</span><span class="saved-letter">A</span><span class="saved-letter">I</span><span class="saved-letter">N</span><span class="saved-gap"></span><span class="saved-letter">S</span><span class="saved-letter">A</span><span class="saved-letter">V</span><span class="saved-letter">E</span><span class="saved-letter">D</span></span>
+      </div>
+
+      <div class="freeswing-hint" data-freeswing-hint hidden>
+        <strong>FREE SWING</strong>
+        <span class="fs-desk">Hold click: tether · release: let go (auto-flip at speed) · WASD: run &amp; steer · Shift: sprint · Space: jump · Q: trick · Esc: exit</span>
+        <span class="fs-touch">Tap &amp; hold to fire · lift to release</span>
+      </div>
+
+      <nav class="rail" data-nav aria-label="Chapters">
+        <button type="button" data-goto="0" aria-label="Chapter 1: Perch (key 1)"><span>1</span><em>PERCH</em></button>
+        <button type="button" data-goto="1" aria-label="Chapter 2: Swing (key 2)"><span>2</span><em>SWING</em></button>
+        <button type="button" data-goto="2" aria-label="Chapter 3: Threat (key 3)"><span>3</span><em>THREAT</em></button>
+        <button type="button" data-goto="3" aria-label="Chapter 4: Impact (key 4)"><span>4</span><em>IMPACT</em></button>
+        <button type="button" data-goto="4" aria-label="Chapter 5: Rescue (key 5)"><span>5</span><em>RESCUE</em></button>
+        <button type="button" class="rail-free" data-free disabled aria-label="Free swing mode, unlocks after the story (F)"><span>F</span><em>FREE</em></button>
+      </nav>
+      <button type="button" class="sound" data-sound aria-pressed="false">♪ SOUND <b>OFF</b></button>
+    </div>
+
+    <main id="story" class="story">
+      <section id="perch" class="chapter" aria-labelledby="h-perch">
+        <article class="caption">
+          <p class="kicker">Chapter 1</p>
+          <h2 id="h-perch">Perch</h2>
+          <p>Dusk bleeds out over the city. High on the needle of the Meridian Spire, a figure in matte black crouches at the edge, neon-red filament lines pulsing softly along the suit.</p>
+          <p>They call the runner <strong>THREADRUNNER</strong>. Below, ten thousand windows switch on, one floor at a time.</p>
+        </article>
+      </section>
+      <section id="swing" class="chapter" aria-labelledby="h-swing">
+        <article class="caption">
+          <p class="kicker">Chapter 2</p>
+          <h2 id="h-swing">Swing</h2>
+          <p>A step off the corner into nothing. The first tether snaps out, a red line of light that locks onto a tower's face, and gravity turns into speed.</p>
+          <p>Fire, dive, release, flip. Again and again, THREADRUNNER rides the canyon of glass toward the elevated maglev line.</p>
+        </article>
+      </section>
+      <section id="threat" class="chapter" aria-labelledby="h-threat">
+        <article class="caption">
+          <p class="kicker">Chapter 3</p>
+          <h2 id="h-threat">Threat</h2>
+          <p>Two tethers, pulled back like a slingshot, fling THREADRUNNER onto a rooftop. Then a star in the sky starts to grow. A carrier the size of the city slides in overhead and its bay doors open.</p>
+          <p><strong>GANTRY</strong>, a hulking yellow-and-rust demolition mech with one red eye, drops onto a roof hard enough to crack it. All across the skyline, more units in other colours come down after it.</p>
+        </article>
+      </section>
+      <section id="impact" class="chapter" aria-labelledby="h-impact">
+        <article class="caption">
+          <p class="kicker">Chapter 4</p>
+          <h2 id="h-impact">Impact</h2>
+          <p>Hydraulics howl. GANTRY tears a steel cargo container off the roof and hurls it, and for one stretched heartbeat time almost stops.</p>
+          <p>Then it hits. The track shears apart, and a section of the bridge drops into the street. The train is still coming, fast.</p>
+        </article>
+      </section>
+      <section id="rescue" class="chapter chapter-rescue" aria-labelledby="h-rescue">
+        <article class="caption">
+          <p class="kicker">Chapter 5</p>
+          <h2 id="h-rescue">Rescue</h2>
+          <p>THREADRUNNER lands on the lead car and turns back toward the towers. <span class="interactive-note">Click or tap the glowing anchors, or tab to them and press Enter, to fire tethers.</span></p>
+          <p>Each line bites and strains, and the train slows. It stops a hand's width from the edge. <span class="saved-note">The train is saved.</span></p>
+        </article>
+      </section>
+      <section id="outro" class="chapter chapter-outro" aria-labelledby="h-outro">
+        <article class="caption credits">
+          <p class="kicker">Epilogue</p>
+          <h2 id="h-outro">The line holds</h2>
+          <p>Sirens rise from the streets below. The carrier lifts back into the clouds, and on its rooftop GANTRY's red eye goes dark. THREADRUNNER is already gone, a thin red line fading between the towers.</p>
+          <button type="button" class="cta" data-cta-free>Enter free swing <kbd>F</kbd></button>
+          <h3>Credits</h3>
+          <ul>
+            <li>Story, code &amp; procedural art: original work. THREADRUNNER and GANTRY are original characters.</li>
+            <li>three.js (MIT) · postprocessing (Zlib) · anime.js v4 (MIT) · Lenis (MIT)</li>
+            <li>Fonts: Anton, Bangers, Space Grotesk (SIL OFL 1.1), self-hosted</li>
+            <li>References: threex.proceduralcity, Unity-Verlet-Rope, sheen, THREE.MeshLine, webgl-noise (all MIT). See README.</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+
+    <noscript><p class="noscript">THREADLINE needs JavaScript for the 3D story. The full story text is above.</p></noscript>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
