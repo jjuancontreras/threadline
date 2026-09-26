@@ -27,6 +27,7 @@ import { createComic } from './ui/comic.js';
 import { createNav } from './ui/nav.js';
 import { createRescueUI } from './ui/rescueUI.js';
 import { createTouchPad } from './ui/touchPad.js';
+import { createModes } from './core/modes.js';
 import { revealTitle, titleProgress } from './ui/title.js';
 import { createAudio } from './audio/engine.js';
 
@@ -127,9 +128,6 @@ function init() {
   const comic = createComic(overlay, reduced);
   const shake = createShake(!reduced);
   const crossfadeEl = overlay.querySelector('[data-crossfade]');
-  let freeUnlocked = false;
-  let freeOn = false;
-  let rescueLatched = false; // once the climax starts it owns the frame until saved
 
   const rescueUI = createRescueUI(overlay, RESCUE_ANCHORS, (i) => director.rescue.fire(i));
   const director = createDirector({
@@ -144,7 +142,7 @@ function init() {
     rescueUI,
     title: (v) => titleProgress(overlay, v),
     crossfade: () => animate(crossfadeEl, { opacity: [0.85, 0], duration: 700, ease: 'outQuad' }),
-    onSaved,
+    onSaved: () => modes.onSaved(),
   });
 
   const free = createFreeSwing({
@@ -157,48 +155,10 @@ function init() {
   hooks.free = free.stats;
   createTouchPad(overlay, free.press);
 
-  function onSaved() {
-    html.dataset.rescue = 'saved';
-    hooks.rescue = 'saved';
-    hud.saved(true);
-    freeUnlocked = true;
-    nav.unlockFree();
-    scroll.lock(false);
-  }
-
-  function enterFree() {
-    if (!freeUnlocked || freeOn) return;
-    freeOn = true;
-    html.classList.add('free-mode');
-    scroll.lock(true);
-    free.enter();
-    hud.freeSwingHint(true);
-    hud.saved(false);
-    nav.setFreeActive(true);
-  }
-  function exitFree() {
-    if (!freeOn) return;
-    freeOn = false;
-    free.exit();
-    html.classList.remove('free-mode');
-    hud.freeSwingHint(false);
-    nav.setFreeActive(false);
-    scroll.lock(false);
-    scroll.goto(5, 0.9, true);
-  }
-
-  const nav = createNav(overlay, {
-    onChapter: (i) => {
-      if (freeOn) exitFree();
-      if (rescueLatched && i !== 4) {
-        rescueLatched = false;
-        scroll.lock(false);
-      }
-      scroll.goto(i, i === 0 ? 0 : 0.001);
-    },
-    onFreeSwing: () => (freeOn ? exitFree() : enterFree()),
-    onSound: toggleSound,
-  });
+  const modes = createModes({ scroll, hud, free, html, hooks, isSaved: () => director.rescue.saved });
+  const { enterFree, exitFree } = modes;
+  const nav = createNav(overlay, { onChapter: modes.gotoChapter, onFreeSwing: modes.toggleFree, onSound: toggleSound });
+  modes.bindNav(nav);
   document.querySelector('[data-cta-free]').addEventListener('click', enterFree);
   // escape hatch for the scroll lock: fire every remaining tether at once
   overlay.querySelector('[data-rescue-skip]').addEventListener('click', () => RESCUE_ANCHORS.forEach((_, i) => director.rescue.fire(i)));
@@ -258,17 +218,9 @@ function init() {
     scroll.raf(ms);
     world.shared.uTime.value = time;
     world.pixel.value = (window.innerHeight * stage.dpr) / (2 * halfTan());
-    let { index, p } = scroll.locate();
-    if (index === 4 && !director.rescue.saved && !rescueLatched && !freeOn) {
-      rescueLatched = true;
-      scroll.goto(4, 0.002, true); // land firmly inside chapter 5 before locking
-      scroll.lock(true);
-    }
-    if (rescueLatched && director.rescue.saved) rescueLatched = false;
-    if (rescueLatched) {
-      index = 4;
-      p = 0.002;
-    }
+    const located = scroll.locate();
+    const { index, p } = modes.resolve(located.index, located.p);
+    const freeOn = modes.freeOn;
     if (index !== activeSection) {
       sections.forEach((s, i) => s.classList.toggle('active', i === index));
       activeSection = index;

@@ -7,6 +7,7 @@ import { impact } from './chapters/impact.js';
 import { createRescueController } from './chapters/rescue.js';
 import { createCameraRig } from './camera.js';
 import { createCues } from './cues.js';
+import { EPILOGUE } from './beats.js';
 import { simulateSwingPath, annotatePath } from '../physics/swingPath.js';
 import { closestOnTower } from '../physics/anchors.js';
 import { setLight, clearLight, LIGHT } from '../core/shared.js';
@@ -238,8 +239,8 @@ export function createDirector(w) {
         else if (index < 5) ctx.mothership.update({ ...SHIP_DOCKED, time });
         else {
           // epilogue: bay doors seal, then the carrier lifts back into the clouds
-          const doors = Array(7).fill(1 - smoothstepLocal(0.04, 0.22, p));
-          ctx.mothership.update({ ...SHIP_DOCKED, doors, arrive: 1 - smoothstepLocal(0.25, 0.95, p), time });
+          const doors = Array(7).fill(1 - smoothstepLocal(...EPILOGUE.doorsClose, p));
+          ctx.mothership.update({ ...SHIP_DOCKED, doors, arrive: 1 - smoothstepLocal(...EPILOGUE.shipDepart, p), time });
         }
       }
       w.title(ctx.titleVisible);

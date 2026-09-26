@@ -1,14 +1,13 @@
 // Chapter 4 — IMPACT: GANTRY hurls the container in bullet time and severs the track.
 import { smoothstep, clamp, vAdd, vScale, vSub, vLerp, easeInOutCubic } from '../../core/math.js';
 import { WORLD } from '../../core/layout.js';
+import { IMPACT } from '../beats.js';
 import { GANTRY_SPOT, CONTAINER_REST, WATCH_SPOT } from './threat.js';
 
 export const IMPACT_POINT = [0, WORLD.track.y + 0.6, WORLD.track.z];
 const G = [0, -18, 0];
-const RELEASE = 2.0;
-const FLIGHT = 1.1;
+const { release: RELEASE, flight: FLIGHT, total: TOTAL } = IMPACT;
 const HIT = RELEASE + FLIGHT;
-const TOTAL = 6.5;
 export const TRAIN_CH4 = { start: -270, speed: 20 };
 export const noseAt = (tau) => TRAIN_CH4.start + TRAIN_CH4.speed * tau;
 const THROW_FROM = vAdd(GANTRY_SPOT, [-1.5, 12.5, 2.5]);

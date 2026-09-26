@@ -3,13 +3,14 @@ import { createRescue, stepRescue, fireAnchor, anchoredCount, strain } from '../
 import { WORLD, RESCUE_ANCHORS } from '../../core/layout.js';
 import { clamp, lerp, smoothstep, vLerp } from '../../core/math.js';
 import { noseAt } from './impact.js';
+import { EPILOGUE } from '../beats.js';
 
 const RESCUE_SHOT = { pos: [34, 132, -396], look: [-88, 62, -505], hfov: 84, fov: 50, lag: 0.6 };
 const CLOSE_SHOT = { pos: [6, 55.4, -491.5], look: [-16, 52.6, -500], hfov: 70, fov: 46, lag: 0.9 };
 const WIDE_SHOT = { pos: [70, 175, -300], look: [-20, 60, -560], hfov: 80, fov: 50 };
 
 // Epilogue: THREADRUNNER fires a line at a tower and zips off, gone before the wide shot settles.
-const LEAVE = { fire: 0.28, launch: 0.34, gone: 0.6 };
+const LEAVE = { fire: EPILOGUE.heroFire, launch: EPILOGUE.heroLaunch, gone: EPILOGUE.heroGone };
 
 function departure(ctx, stand, p) {
   const anchor = ctx.midAnchor;

@@ -5,6 +5,7 @@ import { WORLD } from '../../core/layout.js';
 import { closestOnTower } from '../../physics/anchors.js';
 import { trickAt } from '../../characters/tricks.js';
 import { SHIP } from '../mothership.js';
+import { THREAT, SQUAD_DROPS } from '../beats.js';
 
 const W = WORLD.watch;
 export const WATCH_SPOT = [W.x - W.w + 1.6, W.h + 1.45, W.z - W.d + 1.6];
@@ -14,8 +15,7 @@ export const CONTAINER_REST = [WORLD.gantryRoof.x + 4, WORLD.gantryRoof.h + 1.3,
 export const TRAIN_CH3 = [-430, -270];
 
 // beats (chapter progress)
-const B = { load: 0.06, launch: 0.17, land: 0.2, run: 0.25, twinkle: 0.27, arrive: 0.3, docked: 0.42, drop: 0.44, impact: 0.52 };
-const SQUAD_DROPS = [0.47, 0.5, 0.55, 0.58, 0.62, 0.66];
+const B = THREAT;
 
 /** Two rooftop-edge anchors beyond the landing roof, one either side of the flight line. */
 export function slingAnchors(towers, from, to) {

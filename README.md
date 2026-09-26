@@ -56,16 +56,20 @@ URL options: `?q=high|medium|low` forces a quality tier (and locks the adaptive 
 
 ```
 src/
-  core/        math, world layout, quality tiers, renderer + post chain, Lenis scroll, shared uniforms
+  core/        math, world layout, quality tiers + downgrade ladder, renderer + post chain, Lenis scroll,
+               shared uniforms, woff2 font loader, story/free-swing modes + rescue latch
   physics/     Verlet swinger, rope chain, anchor picking, pre-simulated swing path, rescue braking model
-  characters/  rig helpers, THREADRUNNER, GANTRY (+ cargo container)
-  scenes/      city, environment, track, train, camera rig, director, chapters/*, free swing
+  characters/  rig helpers, poses, tricks, THREADRUNNER (2099 suit, cape), GANTRY (+ container), squad units
+  scenes/      city, environment, traffic, carrier, track, train, camera rig, director, cues,
+               beats.js (every chapter timing in one place), chapters/*, free swing
   shaders/     tower windows + dynamic lights, sky, streets, lens effect (radial blur, speed lines, CA, flash)
   fx/          tethers (ribbon + Verlet), particle bursts and debris, trauma camera shake
-  ui/          HUD, comic impact words and halftone, nav rail, title reveal, rescue anchor buttons
+  ui/          HUD, comic impact words and halftone, nav rail, title reveal, rescue anchor buttons, touch pad
   audio/       Web Audio engine (wind, pad, heartbeat, booms, zaps)
-scripts/       verify.mjs (Playwright), size.mjs (bundle budget), sim-swing.mjs (path tuning), contact-sheet.mjs
-tests/         physics.test.js
+scripts/       verify.mjs (Playwright), perf.mjs, gpubench.mjs, hero-shots.mjs, size.mjs (bundle budget),
+               sim-swing.mjs (path tuning), contact-sheet.mjs, lib/serve.mjs (shared static server)
+tests/         physics, quality ladder, story timing / tricks / gait / cues, modes (node:test)
+.github/       CI: unit tests + build + size budget
 ```
 
 Every source file is under 500 lines. See [RESEARCH.md](RESEARCH.md) for the stack decision, physics choice, license notes and the shot-by-shot plan.
