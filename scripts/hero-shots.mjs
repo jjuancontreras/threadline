@@ -1,30 +1,18 @@
 // Dev helper: close-up turnaround of THREADRUNNER's suit in a few story poses.
 // Writes verify/screenshots/hero/*.png. Needs a build (uses ?debug camera override).
 import { chromium } from 'playwright';
-import { createServer } from 'node:http';
-import { readFile, mkdir } from 'node:fs/promises';
-import { join, extname, resolve } from 'node:path';
+import { serveDist } from './lib/serve.mjs';
+import { mkdir } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 
-const ROOT = resolve('dist');
 const OUT = resolve('verify/screenshots/hero');
-const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' };
-const server = createServer(async (q, s) => {
-  try {
-    const p = new URL(q.url, 'http://x').pathname;
-    const f = join(ROOT, p === '/' ? 'index.html' : p);
-    s.writeHead(200, { 'Content-Type': T[extname(f)] || 'application/octet-stream' });
-    s.end(await readFile(f));
-  } catch {
-    s.writeHead(404);
-    s.end();
-  }
-}).listen(4327);
+const server = await serveDist();
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 await mkdir(OUT, { recursive: true });
 const browser = await chromium.launch({ args: ['--ignore-gpu-blocklist', '--use-angle=d3d11'] });
 const page = await browser.newPage({ viewport: { width: 1000, height: 1000 } });
-await page.goto('http://localhost:4327/?q=high&debug');
+await page.goto(`${server.origin}/?q=high&debug`);
 await page.waitForFunction(() => window.__threadline?.ready);
 await page.addStyleTag({ content: '.overlay, .caption { visibility: hidden !important; }' });
 
@@ -57,5 +45,5 @@ for (const pose of poses) {
   await page.evaluate(() => (window.__threadline.debug.cam = null));
 }
 await browser.close();
-server.close();
+await server.close();
 console.log('hero shots written to', OUT);

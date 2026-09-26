@@ -1,14 +1,11 @@
 // THREADLINE verification: serves dist/, drives the story with Playwright at two viewports,
 // normal + reduced motion, saves screenshots and fails on any console/page error.
 import { chromium } from 'playwright';
-import { createServer } from 'node:http';
-import { readFile, mkdir, writeFile, stat } from 'node:fs/promises';
-import { join, extname, resolve } from 'node:path';
+import { serveDist } from './lib/serve.mjs';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 
-const ROOT = resolve('dist');
 const OUT = resolve('verify/screenshots');
-const PORT = 4318;
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.woff': 'font/woff', '.svg': 'image/svg+xml' };
 
 const VIEWPORTS = [
   { name: 'desktop', width: 1440, height: 900, query: '?q=high', mobile: false },
@@ -24,22 +21,6 @@ const SHOTS = [
   { chapter: 3, pre: 0.62, p: 0.745, file: '4-impact' },
 ];
 
-function serve() {
-  const server = createServer(async (req, res) => {
-    try {
-      const url = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-      let file = join(ROOT, url === '/' ? 'index.html' : url);
-      if (!file.startsWith(ROOT)) throw new Error('outside root');
-      if ((await stat(file)).isDirectory()) file = join(file, 'index.html');
-      res.writeHead(200, { 'Content-Type': TYPES[extname(file)] || 'application/octet-stream' });
-      res.end(await readFile(file));
-    } catch {
-      res.writeHead(404);
-      res.end('not found');
-    }
-  });
-  return new Promise((ok) => server.listen(PORT, () => ok(server)));
-}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const hook = (page, expr) => page.evaluate(`(() => { const t = window.__threadline; return ${expr}; })()`);
@@ -140,7 +121,7 @@ async function run(browser, vp, reduced) {
   const shots = [];
   const extras = [];
 
-  await page.goto(`http://localhost:${PORT}/${vp.query}`);
+  await page.goto(`${server.origin}/${vp.query}`);
   await waitFor(page, 't && t.ready', 30000, 'app ready');
   const info = await hook(page, '({ webgl: t.webgl, quality: t.quality })');
   const gl = await page.evaluate(() => {
@@ -191,7 +172,7 @@ async function run(browser, vp, reduced) {
   return { tag, info, gl, scrolled, errors, shots, extras, savedIn, rescue, free, freeOk };
 }
 
-const server = await serve();
+const server = await serveDist();
 const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--use-angle=default'] });
 const results = [];
 try {
@@ -205,7 +186,7 @@ try {
   }
 } finally {
   await browser.close();
-  server.close();
+  await server.close();
 }
 
 let ok = true;

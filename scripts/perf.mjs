@@ -1,28 +1,14 @@
 // Smoothness probe: wheel-scrolls through chapter 2 and free swing, recording every rAF frame.
 // Reports FPS, frame-time p95, and "jerk" = how uneven per-frame hero/camera motion is.
 import { chromium } from 'playwright';
-import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { join, extname, resolve } from 'node:path';
+import { serveDist } from './lib/serve.mjs';
 
-const ROOT = resolve('dist');
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2' };
-const server = createServer(async (req, res) => {
-  try {
-    const p = new URL(req.url, 'http://x').pathname;
-    const f = join(ROOT, p === '/' ? 'index.html' : p);
-    res.writeHead(200, { 'Content-Type': TYPES[extname(f)] || 'application/octet-stream' });
-    res.end(await readFile(f));
-  } catch {
-    res.writeHead(404);
-    res.end();
-  }
-}).listen(4319);
+const server = await serveDist();
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const browser = await chromium.launch({ args: ['--ignore-gpu-blocklist', '--use-angle=d3d11'] }); // match desktop Chrome on Windows
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-await page.goto('http://localhost:4319/?q=high');
+await page.goto(`${server.origin}/?q=high`);
 await page.waitForFunction(() => window.__threadline?.ready);
 await sleep(1500);
 
@@ -82,4 +68,4 @@ for (let i = 0; i < 4; i++) {
 }
 analyse('free-swing', await stop());
 await browser.close();
-server.close();
+await server.close();

@@ -1,0 +1,22 @@
+# Unit tests + production build + gzip size budget. The Playwright verify run stays local:
+# it needs a real GPU (see README → Performance).
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build # fails if gzipped JS exceeds the 700 KB budget

@@ -6,6 +6,7 @@ import { threat, GANTRY_SPOT } from './chapters/threat.js';
 import { impact } from './chapters/impact.js';
 import { createRescueController } from './chapters/rescue.js';
 import { createCameraRig } from './camera.js';
+import { createCues } from './cues.js';
 import { simulateSwingPath, annotatePath } from '../physics/swingPath.js';
 import { closestOnTower } from '../physics/anchors.js';
 import { setLight, clearLight, LIGHT } from '../core/shared.js';
@@ -60,7 +61,7 @@ function unblock(shot, subject, towers) {
 
 export function createDirector(w) {
   const rig = createCameraRig(w.camera);
-  const cues = new Set();
+  const cues = createCues();
   let lastKey = '';
   const fogTmp = new THREE.Color();
 
@@ -148,10 +149,7 @@ export function createDirector(w) {
       ctx.alertOn = on;
     },
     cue(key, active, fn) {
-      if (active && !cues.has(key)) {
-        cues.add(key);
-        if (!ctx._scrubbingBack) fn();
-      } else if (!active) cues.delete(key);
+      cues.cue(key, active, ctx._scrubbingBack, fn);
     },
     crossfadeKey(key) {
       if (key !== lastKey) {

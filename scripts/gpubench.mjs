@@ -1,29 +1,15 @@
 // GPU cost benchmark: renders the current frame N times with a readPixels sync and reports
 // the median ms per frame — immune to rAF/vsync/compositor noise. Needs a `?debug` build hook.
 import { chromium } from 'playwright';
-import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { join, extname, resolve } from 'node:path';
+import { serveDist } from './lib/serve.mjs';
 
-const ROOT = resolve('dist');
-const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
-const server = createServer(async (q, s) => {
-  try {
-    const p = new URL(q.url, 'http://x').pathname;
-    const f = join(ROOT, p === '/' ? 'index.html' : p);
-    s.writeHead(200, { 'Content-Type': T[extname(f)] || 'application/octet-stream' });
-    s.end(await readFile(f));
-  } catch {
-    s.writeHead(404);
-    s.end();
-  }
-}).listen(4323);
+const server = await serveDist();
 
 const SHOTS = [[0, 0.5], [1, 0.5], [2, 0.8], [3, 0.5], [4, 0.01]];
 const browser = await chromium.launch({ args: ['--ignore-gpu-blocklist', ...(process.env.ANGLE ? [`--use-angle=${process.env.ANGLE}`] : [])] });
 for (const q of process.argv.slice(2).length ? process.argv.slice(2) : ['high', 'low']) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  await page.goto(`http://localhost:4323/?q=${q}&debug`);
+  await page.goto(`${server.origin}/?q=${q}&debug`);
   await page.waitForFunction(() => window.__threadline?.ready);
   await new Promise((r) => setTimeout(r, 1200));
   const row = [];
@@ -50,4 +36,4 @@ for (const q of process.argv.slice(2).length ? process.argv.slice(2) : ['high', 
   await page.close();
 }
 await browser.close();
-server.close();
+await server.close();
