@@ -107,3 +107,23 @@ Each chapter is a `<section>` of the semantic story layer; scroll progress `p∈
   - Hiding a group that holds lights changes the light count and forces every lit material to recompile, which showed up as a 100–150 ms hitch on entering chapter 3. Lights now live at scene level and are zeroed instead.
   - Benchmarks must run on the D3D11 backend; see README → Performance notes.
 - **Bug fixed:** the rescue scroll lock could engage 1 px before chapter 5 and deadlock the page. The climax now latches its own state.
+
+## 9. Revision 3 (2026-09-26): Spider-Man 2099 fan-art suit (private build)
+
+At the owner's request, for a private, unpublished build, the hero now wears a recreation of Miguel O'Hara's Spider-Man 2099 suit. This supersedes the originality guard-rails in §4 **for the hero's suit only**. The code is still original, and GANTRY and the story are unchanged.
+
+**Design notes gathered**
+- Sources: [Marvel Database](https://marvel.fandom.com/wiki/Spider-Man's_2099_Suit), [CBR ranking](https://www.cbr.com/best-spider-man-2099-costumes-movies-comics-ranked/), [MovieWeb](https://movieweb.com/spider-verse-3-new-photos-tease-new-look-for-spider-man-2099/).
+- Colours: a blue-black ("technically black") bodysuit with red.
+- Emblem: a skull-inspired red spider on the chest and back.
+- Mask: see-through lenses outlined by a red design; red that glows ominously in the film.
+- Hands: exaggerated forearm claws/spikes and talons.
+- Build: bulkier and broader in *Across the Spider-Verse*.
+- Cape: the classic torn "web cape" of unstable-molecule fabric under the arms.
+
+**Implementation** (`src/characters/suit2099.js`, `src/characters/cape.js`)
+- Canvas-painted emblem (front and back) wrapped on the torso, and a face decal on the helmet front, each with a matching emissive map for the glow.
+- Blue fresnel rim sheen via `onBeforeCompile`.
+- Cone forearm spikes, talons and toe claws.
+- Two under-arm membranes rebuilt in world space every frame from joint markers (shoulder/elbow/wrist to armpit/waist/hip), with a saw-tooth tattered edge that flutters at speed.
+- The joint rig, pose library, tricks and gait are untouched, so every animation carries over.

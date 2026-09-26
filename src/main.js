@@ -73,6 +73,7 @@ function buildWorld(stage, quality) {
   scene.add(env.group, city.group, track.group, train.group, hero.root, gantry.root, container, tethers.group);
   scene.add(bursts.dust.points, bursts.sparks.points, bursts.embers.points, bursts.puff.points, bursts.debris.mesh);
   scene.add(traffic.group, mothership.group, ...gantry.lights);
+  scene.add(...hero.capeMeshes);
   return { shared, towers, env, city, traffic, mothership, track, train, hero, gantry, container, tethers, bursts, pixel };
 }
 
@@ -254,6 +255,13 @@ function init() {
     world.city.update(stage.camera.position);
     world.traffic.update(time * (reduced ? 0.6 : 1));
     const tB = performance.now();
+    if (hooks.debug?.cam) {
+      // ?debug only: orbit a fixed camera around the hero for turnaround captures
+      const { dist, yaw, height } = hooks.debug.cam;
+      const h = world.hero.root.position;
+      stage.camera.position.set(h.x + Math.sin(yaw) * dist, h.y + height, h.z + Math.cos(yaw) * dist);
+      stage.camera.lookAt(h.x, h.y + 0.3, h.z);
+    }
     stage.render(dt);
     const tC = performance.now();
     hooks.timing = { logic: tB - tA, render: tC - tB };

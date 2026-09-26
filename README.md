@@ -1,6 +1,6 @@
 # THREADLINE
 
-A cinematic, scroll-driven, real-time WebGL story. **THREADRUNNER**, an original tether-slinging hero in a matte-black suit with neon-red filament lines, stops a runaway maglev train after **GANTRY**, an original yellow-and-rust demolition mech with a single red sensor eye, is dropped onto the city from a city-sized carrier ship (along with a squad of differently-coloured units) and severs the track with a thrown cargo container.
+A cinematic, scroll-driven, real-time WebGL story. **THREADRUNNER**, a tether-slinging hero wearing a fan-art recreation of Miguel O'Hara's **Spider-Man 2099** suit (Across the Spider-Verse look), stops a runaway maglev train after **GANTRY**, an original yellow-and-rust demolition mech with a single red sensor eye, is dropped onto the city from a city-sized carrier ship (along with a squad of differently-coloured units) and severs the track with a thrown cargo container.
 
 Everything is procedural: the city (instanced towers with glass-curtain or concrete facades, wet streets, moving traffic, water tanks, antennas, a cloud deck, fog, rain), both characters (built from primitives, animated with a pose library and procedural layers), the carrier ship, the train, the track and all FX. No models, textures or audio files are loaded.
 
@@ -130,6 +130,10 @@ Every source file is under 500 lines. See [RESEARCH.md](RESEARCH.md) for the sta
 | T. Jakobsen, "Advanced Character Physics" (GDC 2001) | Paper | Verlet integration and constraint projection |
 | S. Eiserloh, "Math for Game Programmers: Juicing Your Cameras" (GDC 2016) | Talk | Trauma-based camera shake |
 
-### Original work
+### Original work and fan art
 
-Story, characters (THREADRUNNER, GANTRY), city layout, all shaders, physics, FX, UI and audio synthesis are original to this project. The characters are deliberately not based on any existing comic or film property.
+Story, GANTRY, city layout, all shaders, physics, FX, UI and audio synthesis are original to this project.
+
+**Fan-art notice:** the hero's suit is a personal, non-commercial recreation of **Spider-Man 2099 (Miguel O'Hara)**, based on the *Spider-Man: Across the Spider-Verse* design. Spider-Man and Spider-Man 2099 are trademarks and copyrighted characters of Marvel. This build is for local, private use only and must not be published or deployed. Before any public release, swap back to an original suit (the rig and animations are independent of the suit; see `src/characters/suit2099.js`).
+
+Suit references: [Marvel Database: Spider-Man's 2099 Suit](https://marvel.fandom.com/wiki/Spider-Man's_2099_Suit), [CBR: Spider-Man 2099's best costumes](https://www.cbr.com/best-spider-man-2099-costumes-movies-comics-ranked/), [MovieWeb: Spider-Verse 3 2099 look](https://movieweb.com/spider-verse-3-new-photos-tease-new-look-for-spider-man-2099/).

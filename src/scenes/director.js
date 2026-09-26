@@ -100,6 +100,7 @@ export function createDirector(w) {
       w.hero.pose(weights, ctx._dt, { snap, gait });
       if (ground !== undefined) root.position.y += ground - w.hero.feetY();
       root.updateMatrixWorld(true);
+      w.hero.syncCape(ctx.time, Math.min(1, (weights.swing || 0) + (weights.dive || 0) + (weights.fly || 0)));
       setLight(w.shared, LIGHT.hero, root.position.toArray(), 10, [1, 0.1, 0.06], 0.1);
     },
     setGantry(pos, visible, weights = { idle: 1 }) {
