@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { joint, box, applyPoses } from './rig.js';
 
+const EYE_ON = new THREE.Color(4, 0.15, 0.1);
+
 function hazardTexture() {
   const c = document.createElement('canvas');
   c.width = 128;
@@ -54,7 +56,7 @@ export function createGantry() {
   const steel = new THREE.MeshStandardMaterial({ color: 0x2a2c31, roughness: 0.6, metalness: 0.6 });
   const chrome = new THREE.MeshStandardMaterial({ color: 0xdfe4ea, roughness: 0.25, metalness: 0.55 });
   const hazard = new THREE.MeshStandardMaterial({ map: hazardTexture(), roughness: 0.6 });
-  const eyeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 0.15, 0.1) });
+  const eyeMat = new THREE.MeshBasicMaterial({ color: EYE_ON.clone() });
 
   const root = new THREE.Group();
   const hips = new THREE.Group();
@@ -129,9 +131,13 @@ export function createGantry() {
     eyeMat,
     eyeLight,
     lights: [eyeLight, work],
-    /** Copy marker positions onto the scene-level lights; zero them while GANTRY is hidden. */
-    syncLights(visible) {
-      eyeLight.intensity = visible ? 10 : 0;
+    /**
+     * Copy marker positions onto the scene-level lights; zero them while GANTRY is hidden.
+     * @param eye 0..1 sensor power (0 = shut down after the rescue)
+     */
+    syncLights(visible, eye = 1) {
+      eyeMat.color.copy(EYE_ON).multiplyScalar(0.04 + 0.96 * eye);
+      eyeLight.intensity = visible ? 10 * eye : 0;
       work.intensity = visible ? 90 : 0;
       if (!visible) return;
       root.updateMatrixWorld(true);

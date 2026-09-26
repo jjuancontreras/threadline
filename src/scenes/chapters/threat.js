@@ -89,7 +89,8 @@ function slingshot(ctx, p, end, endVel) {
 
 function shipState(p, time) {
   const doors = [smoothstep(B.docked - 0.02, B.drop, p), ...SQUAD_DROPS.map((d) => smoothstep(d - 0.04, d, p))];
-  const drops = [0, ...SQUAD_DROPS.map((d) => clamp((p - d) / 0.07))];
+  // unclamped past 1 so the carrier can play landing dust after touchdown
+  const drops = [0, ...SQUAD_DROPS.map((d) => Math.max(0, (p - d) / 0.07))];
   const tw = invLerp(B.twinkle - 0.01, B.twinkle + 0.012, p) * (1 - invLerp(B.twinkle + 0.02, B.arrive + 0.02, p));
   return { arrive: invLerp(B.arrive, B.docked, p), twinkle: tw, doors, drops, time };
 }

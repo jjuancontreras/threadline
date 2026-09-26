@@ -9,6 +9,7 @@ export function createHud(root, reducedMotion) {
   const alert = q('[data-alert]');
   const meter = q('[data-rescue-meter]');
   const gap = q('[data-gap]');
+  const skip = q('[data-rescue-skip]');
   const pips = [...root.querySelectorAll('[data-pip]')];
   const saved = q('[data-saved]');
   const slowmo = q('[data-slowmo]');
@@ -50,6 +51,7 @@ export function createHud(root, reducedMotion) {
       if (!state) return;
       gap.textContent = `${state.gap.toFixed(2)} m`;
       call.textContent = state.saved ? 'THE LINE HOLDS' : 'TAP THE GLOWING ANCHORS';
+      skip.hidden = state.saved;
       pips.forEach((p, i) => p.classList.toggle('on', i < state.anchored));
     },
     saved(on) {

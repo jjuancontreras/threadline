@@ -1,6 +1,7 @@
 // FREE SWING: hold to fire a tether at the nearest building along the aim, release to let go
 // (momentum preserved, auto-trick at speed). On the street or a roof: WASD runs (A/D turn),
-// Shift sprints, Space jumps; Q performs a trick in the air. Touch: tap-hold fires, lift releases.
+// Shift sprints, Space jumps; Q performs a trick in the air; E (held) fires a tether straight ahead.
+// Touch: tap-hold fires, lift releases; the on-screen pad (ui/touchPad.js) drives press().
 import * as THREE from 'three';
 import { createSwinger, step, attach, release, velocity } from '../physics/swinger.js';
 import { pickAnchor } from '../physics/anchors.js';
@@ -13,7 +14,8 @@ const SPAWN = [0, 96, -330];
 const SPAWN_VEL = [0, 4, 24];
 const RUN = { walk: 7, sprint: 14, accel: 10, turn: 2.6, jump: 10 };
 const TRICK_TIME = 0.75;
-const KEYS = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r', Space: 'u', ShiftLeft: 's', ShiftRight: 's', KeyQ: 'q' };
+const KEYS = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r', Space: 'u', ShiftLeft: 's', ShiftRight: 's', KeyQ: 'q', KeyE: 'e' };
+const AIM_AHEAD = [0, 0.25]; // screen-space aim used for keyboard fire
 
 export function createFreeSwing({ towers, camera, canvas, reduced, onMiss }) {
   let s = createSwinger(SPAWN, SPAWN_VEL, DT);
@@ -80,24 +82,39 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss }) {
     },
     { passive: false },
   );
-  const onUp = () => {
-    if (!active) return;
-    holding = false;
+  /** Let go of the line (momentum kept); a fast release earns an automatic trick. */
+  function letGo() {
     if (!s.anchor) return;
     const fast = vLen(velocity(s, DT)) > 20;
     s = release(s, DT, 3);
     stats.released++;
     if (fast && !reduced) startTrick(now);
+  }
+  const onUp = () => {
+    if (!active) return;
+    holding = false;
+    if (!held.has('e')) letGo();
   };
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointercancel', onUp);
   window.addEventListener('pointermove', (e) => active && setPointer(e));
+  /** Press/release one control ('f','b','l','r','u','s','q','e'); shared by keyboard and touch pad. */
+  function press(key, down) {
+    if (!active) return;
+    const was = held.has(key);
+    if (down) held.add(key);
+    else held.delete(key);
+    if (down && !was && key === 'q' && !reduced) startTrick(now);
+    if (key === 'e' && down && !was) {
+      pointer.set(...AIM_AHEAD);
+      lastTry = -1;
+    }
+    if (key === 'e' && !down && !holding) letGo();
+  }
   const onKey = (down) => (e) => {
     if (!active || !KEYS[e.code]) return;
     e.preventDefault();
-    if (down) held.add(KEYS[e.code]);
-    else held.delete(KEYS[e.code]);
-    if (down && KEYS[e.code] === 'q' && !reduced) startTrick(now);
+    press(KEYS[e.code], down);
   };
   window.addEventListener('keydown', onKey(true));
   window.addEventListener('keyup', onKey(false));
@@ -210,6 +227,7 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss }) {
     get position() {
       return [...s.pos];
     },
+    press,
     enter() {
       s = createSwinger(SPAWN, SPAWN_VEL, DT);
       prevPos = [...SPAWN];
@@ -226,7 +244,7 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss }) {
     },
     update(dt, ctx) {
       now = ctx.time;
-      if (holding && !s.anchor && ctx.time - lastTry > 0.25) {
+      if ((holding || held.has('e')) && !s.anchor && ctx.time - lastTry > 0.25) {
         lastTry = ctx.time;
         fire(ctx.time);
       }

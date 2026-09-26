@@ -110,6 +110,12 @@ body {
 .pips i { width: 18px; height: 8px; border: 1px solid var(--teal); display: block; }
 .pips i.on { background: var(--teal); box-shadow: 0 0 10px var(--teal); }
 .rescue-gap { color: var(--dim); font-size: 0.85rem; }
+.rescue-skip {
+  font-family: var(--display); letter-spacing: 0.1em; font-size: 0.8rem; color: var(--dim); background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25); padding: 4px 10px; cursor: pointer;
+}
+.rescue-skip:hover, .rescue-skip:focus-visible { color: #fff; border-color: #fff; }
+.rescue-skip[hidden] { display: none; }
 .rescue-gap b { color: #fff; font-size: 1.2rem; font-weight: 400; font-variant-numeric: tabular-nums; }
 
 .anchors { position: absolute; inset: 0; }
@@ -215,6 +221,22 @@ body {
 
 /* free swing: story layer steps aside */
 html.free-mode .story, html.free-mode .caption { visibility: hidden !important; }
+/* touch run pad (free mode, touch screens only) */
+.touchpad { display: none; }
+@media (pointer: coarse) {
+  html.free-mode .touchpad {
+    display: flex; justify-content: space-between; align-items: flex-end; position: absolute; left: 0; right: 0;
+    bottom: calc(var(--gutter) + env(safe-area-inset-bottom)); padding: 0 var(--gutter);
+  }
+}
+.touchpad-side { display: flex; gap: 8px; }
+@media (pointer: coarse) { html.free-mode .freeswing-hint { bottom: calc(96px + env(safe-area-inset-bottom)) !important; } }
+.touchpad button {
+  width: 56px; height: 56px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.35); background: rgba(8, 10, 18, 0.55);
+  color: #fff; font-family: var(--display); letter-spacing: 0.06em; font-size: 0.8rem; touch-action: none; user-select: none;
+  -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.touchpad button.on { background: rgba(227, 18, 28, 0.6); border-color: #ff4d3a; }
 html.free-mode .rescue-meter, html.free-mode .saved, html.free-mode .title { display: none; }
 html.free-mode #stage { touch-action: none; cursor: crosshair; }
 

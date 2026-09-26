@@ -103,7 +103,13 @@ export function createDirector(w) {
       w.hero.syncCape(ctx.time, Math.min(1, (weights.swing || 0) + (weights.dive || 0) + (weights.fly || 0)));
       setLight(w.shared, LIGHT.hero, root.position.toArray(), 10, [1, 0.1, 0.06], 0.1);
     },
-    setGantry(pos, visible, weights = { idle: 1 }) {
+    /** Show/hide the hero and the world-space cape together. */
+    showHero(visible) {
+      w.hero.root.visible = visible;
+      w.hero.capeMeshes.forEach((m) => (m.visible = visible));
+    },
+    /** @param eye 0..1 sensor power; it fades to dark once the train is saved. */
+    setGantry(pos, visible, weights = { idle: 1 }, eye = 1) {
       const g = w.gantry.root;
       g.visible = visible;
       if (!visible) {
@@ -116,8 +122,8 @@ export function createDirector(w) {
       g.rotation.y = -0.9; // face the bridge span
       w.gantry.pose(weights, ctx._dt);
       g.updateMatrixWorld(true);
-      w.gantry.syncLights(true);
-      setLight(w.shared, LIGHT.eye, w.gantry.eyeWorld(), 22, [1, 0.1, 0.05], 0.45);
+      w.gantry.syncLights(true, eye);
+      setLight(w.shared, LIGHT.eye, w.gantry.eyeWorld(), 22, [eye, 0.1 * eye, 0.05 * eye], 0.45);
     },
     setContainer(pos, rot = [0, 0, 0], visible = true) {
       w.container.visible = Boolean(pos) && visible;
@@ -157,7 +163,8 @@ export function createDirector(w) {
 
   const last = ctx.path.samples[ctx.path.samples.length - 1];
   ctx.sling = slingAnchors(w.towers, last.pos, WATCH_SPOT);
-  const SHIP_DOCKED = { arrive: 1, twinkle: 0, doors: Array(7).fill(1), drops: Array(7).fill(1) };
+  // drops > 1 = landed long ago (landing dust finished)
+  const SHIP_DOCKED = { arrive: 1, twinkle: 0, doors: Array(7).fill(1), drops: Array(7).fill(9) };
   const rescue = createRescueController(ctx);
   let prevChapter = 0;
   let prevP = 0;
@@ -170,6 +177,7 @@ export function createDirector(w) {
     ctx.rescueHud = null;
     ctx.alertOn = false;
     ctx.titleVisible = 0;
+    ctx.showHero(true);
   }
 
   function applyGlobals() {
@@ -227,7 +235,11 @@ export function createDirector(w) {
         ctx.bursts.puff.set([0, 0, 0], 0);
         if (index < 2) ctx.mothership.update({ arrive: 0, twinkle: 0, doors: [], drops: [], time });
         else if (index < 5) ctx.mothership.update({ ...SHIP_DOCKED, time });
-        else ctx.mothership.update({ ...SHIP_DOCKED, arrive: 1 - smoothstepLocal(0.25, 0.95, p), time });
+        else {
+          // epilogue: bay doors seal, then the carrier lifts back into the clouds
+          const doors = Array(7).fill(1 - smoothstepLocal(0.04, 0.22, p));
+          ctx.mothership.update({ ...SHIP_DOCKED, doors, arrive: 1 - smoothstepLocal(0.25, 0.95, p), time });
+        }
       }
       w.title(ctx.titleVisible);
       w.tethers.end();
@@ -248,7 +260,7 @@ export function createDirector(w) {
       const x = rescue.state ? rescue.state.x : -12.25;
       ctx.train.setNose(x, time, 0);
       ctx.track.setCollapse(1);
-      ctx.setGantry(null, true, { idle: 1 });
+      ctx.setGantry(null, true, { idle: 1 }, 0);
       ctx.setContainer(null);
       ctx.mothership.update({ arrive: 0, twinkle: 0, doors: [], drops: [], time });
       free.update(dt, ctx);

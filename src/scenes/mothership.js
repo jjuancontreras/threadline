@@ -120,12 +120,18 @@ export function createMothership(shared, towers, mainSpot) {
     ship.add(b.bay);
     return { ...b, roof: r };
   });
+  const dustMat = new THREE.MeshBasicMaterial({ color: 0x8a7a70, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  const dustGeo = new THREE.RingGeometry(0.55, 1, 28).rotateX(-Math.PI / 2);
   const squad = roofs.slice(1).map((r, i) => {
     const unit = createGantryLite(SQUAD_COLORS[i]);
-    unit.rotation.y = Math.atan2(-r[0], -500 - r[2]) + (i % 2 ? 0.4 : -0.4);
+    const heading = Math.atan2(-r[0], -500 - r[2]) + (i % 2 ? 0.4 : -0.4);
+    unit.rotation.y = heading;
     unit.visible = false;
-    group.add(unit);
-    return unit;
+    const dust = new THREE.Mesh(dustGeo, dustMat.clone());
+    dust.position.set(r[0], r[1] + 0.4, r[2]);
+    dust.visible = false;
+    group.add(unit, dust);
+    return { unit, dust, heading };
   });
 
   const twinkle = new THREE.Sprite(
@@ -168,14 +174,31 @@ export function createMothership(shared, towers, mainSpot) {
         b.beam.scale.set(1, len, 1);
         b.beam.position.y = -20 - len / 2;
         if (i === 0) return; // the hero-facing GANTRY is the full rig, driven by the chapter
-        const unit = squad[i - 1];
-        unit.visible = drop > 0;
-        unit.position.set(b.roof[0], lerp(shipY() - 22, b.roof[1], easeInCubic(clamp(drop))), b.roof[2]);
+        animateUnit(squad[i - 1], b.roof, drop, shipY() - 22, s.time, i);
       });
     },
     /** World-space Y of the bay floor (where GANTRY starts its fall). */
     bayY: () => shipY() - 22,
   };
+}
+
+// in drop units (1 unit = the fall duration): how long the landing dust ring and squash last
+const DUST_LIFE = 0.9;
+const SQUASH_LIFE = 0.3;
+
+/** Fall, landing squash + dust ring, then an idle scan (the units look around the skyline). */
+function animateUnit({ unit, dust, heading }, roof, drop, startY, time, i) {
+  unit.visible = drop > 0;
+  unit.position.set(roof[0], lerp(startY, roof[1], easeInCubic(clamp(drop))), roof[2]);
+  const age = drop - 1; // > 0 once landed
+  const landed = clamp(age / SQUASH_LIFE);
+  unit.scale.set(1.15, 1.15 * (1 - 0.14 * Math.sin(landed * Math.PI)), 1.15);
+  unit.rotation.y = heading + Math.sin(time * 0.35 + i * 1.7) * 0.35 * landed;
+  const d = age > 0 && age < DUST_LIFE ? age / DUST_LIFE : -1;
+  dust.visible = d >= 0;
+  if (d < 0) return;
+  dust.scale.setScalar(3 + d * 26);
+  dust.material.opacity = 0.5 * (1 - d) * (1 - d);
 }
 
 function starTexture() {

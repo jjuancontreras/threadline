@@ -28,6 +28,7 @@ import { createHud } from './ui/hud.js';
 import { createComic } from './ui/comic.js';
 import { createNav } from './ui/nav.js';
 import { createRescueUI } from './ui/rescueUI.js';
+import { createTouchPad } from './ui/touchPad.js';
 import { revealTitle, titleProgress } from './ui/title.js';
 import { createAudio } from './audio/engine.js';
 
@@ -112,10 +113,14 @@ function init() {
     return;
   }
   hooks.webgl = true;
+  let contextLost = false;
   canvas.addEventListener('webglcontextlost', (e) => {
-    e.preventDefault();
+    e.preventDefault(); // allow the browser to restore the context
+    contextLost = true;
     textOnly('context-lost');
   });
+  // GPU resources are gone after a loss; a reload is the reliable way to rebuild the whole world.
+  canvas.addEventListener('webglcontextrestored', () => location.reload());
 
   const world = buildWorld(stage, quality);
   precompile(stage);
@@ -151,6 +156,7 @@ function init() {
     onMiss: () => comic.word('NO ANCHOR', { x: 50, y: 30, color: '#9aa6b8', size: 0.35, tilt: 0 }),
   });
   hooks.free = free.stats;
+  createTouchPad(overlay, free.press);
 
   function onSaved() {
     html.dataset.rescue = 'saved';
@@ -195,6 +201,8 @@ function init() {
     onSound: toggleSound,
   });
   document.querySelector('[data-cta-free]').addEventListener('click', enterFree);
+  // escape hatch for the scroll lock: fire every remaining tether at once
+  overlay.querySelector('[data-rescue-skip]').addEventListener('click', () => RESCUE_ANCHORS.forEach((_, i) => director.rescue.fire(i)));
   window.addEventListener('keydown', (e) => e.key === 'Escape' && exitFree());
 
   const monitor = createMonitor(quality, stage.dpr, ({ dpr, post }) => {
@@ -221,7 +229,25 @@ function init() {
   let activeSection = -1;
   const halfTan = () => Math.tan(THREE.MathUtils.degToRad(stage.camera.fov) / 2);
 
+  const MAX_FRAME_ERRORS = 3; // consecutive failures before falling back to the text story
+  let frameErrors = 0;
   function frame(ms) {
+    if (contextLost) return;
+    try {
+      step(ms);
+      frameErrors = 0;
+    } catch (err) {
+      frameErrors++;
+      if (frameErrors === 1) console.error('[threadline] frame failed', err);
+      if (frameErrors >= MAX_FRAME_ERRORS) {
+        textOnly('frame-failed');
+        return;
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function step(ms) {
     const tA = performance.now();
     timer.update(ms);
     const dt = Math.min(timer.getDelta(), 0.1);
@@ -276,7 +302,6 @@ function init() {
     const r = director.rescue.state;
     if (r) hooks.rescueState = { x: r.x, v: r.v, anchored: r.anchored.filter(Boolean).length, fired: r.fired.length, saved: r.saved };
     hooks.ready = true;
-    requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 }

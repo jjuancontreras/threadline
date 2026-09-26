@@ -38,7 +38,7 @@ URL options: `?q=high|medium|low` forces a quality tier (and locks the adaptive 
 | Story | Scroll / swipe | Drive the camera through the chapters |
 | Story | `1`–`5` or the right-hand rail | Jump to a chapter |
 | Story | `M` or the ♪ button | Toggle generative audio (muted by default) |
-| Chapter 5 | Click / tap a glowing anchor ring, or `Tab` to it and press `Enter` | Fire a tether; each anchor brakes the train. Anchors auto-fire after a timeout, so the story always resolves |
+| Chapter 5 | Click / tap a glowing anchor ring, or `Tab` to it and press `Enter` | Fire a tether; each anchor brakes the train. Anchors auto-fire after a timeout, so the story always resolves; **SKIP ›** fires them all at once |
 | After the rescue | `F`, the rail's **F** button, or "Enter free swing" | Free swing mode |
 | Free swing | Hold mouse button (or touch) | Fire a tether at the nearest building along the aim; the rope reels in while held |
 | Free swing | Release | Let go, keeping your momentum (an automatic flip or corkscrew at speed) |
@@ -47,6 +47,8 @@ URL options: `?q=high|medium|low` forces a quality tier (and locks the adaptive 
 | Free swing | `Shift` | Sprint |
 | Free swing | `Space` | Jump |
 | Free swing | `Q` | Aerial trick (flip, corkscrew, twirl) |
+| Free swing | `E` (hold) | Fire a tether straight ahead without the mouse; release to let go |
+| Free swing (touch) | On-screen pad ◀ ▲ ▶ · JUMP · WEB | Turn / run, jump, fire a tether ahead |
 | Free swing | `Esc` or `F` | Back to the story |
 
 ## Structure
