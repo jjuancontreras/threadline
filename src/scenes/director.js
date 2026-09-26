@@ -10,7 +10,7 @@ import { simulateSwingPath, annotatePath } from '../physics/swingPath.js';
 import { closestOnTower } from '../physics/anchors.js';
 import { setLight, clearLight, LIGHT } from '../core/shared.js';
 import { fogColorFor } from '../shaders/sky.js';
-import { RESCUE_ANCHORS } from '../core/layout.js';
+import { RESCUE_ANCHORS, towersNear } from '../core/layout.js';
 import { slingAnchors, WATCH_SPOT } from './chapters/threat.js';
 
 const smoothstepLocal = (a, b, v) => {
@@ -43,7 +43,10 @@ function midAnchor(towers) {
 /** Pull a chase camera in front of any tower that blocks its view of the subject. */
 function unblock(shot, subject, towers) {
   if (!shot.collide || !subject) return shot;
-  const inside = (p) => towers.some((t) => Math.abs(p[0] - t.x) < t.w + 0.6 && Math.abs(p[2] - t.z) < t.d + 0.6 && p[1] < t.h + 0.6);
+  // only towers near the subject→camera segment can block it
+  const mid = [(subject[0] + shot.pos[0]) / 2, 0, (subject[2] + shot.pos[2]) / 2];
+  const near = towersNear(towers, mid, Math.hypot(shot.pos[0] - subject[0], shot.pos[2] - subject[2]) / 2 + 1);
+  const inside = (p) => near.some((t) => Math.abs(p[0] - t.x) < t.w + 0.6 && Math.abs(p[2] - t.z) < t.d + 0.6 && p[1] < t.h + 0.6);
   const steps = 14;
   let last = subject;
   for (let i = 1; i <= steps; i++) {

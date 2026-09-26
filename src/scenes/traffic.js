@@ -127,10 +127,17 @@ export function createTraffic(count, shared) {
   const m = new THREE.Matrix4();
   const rot = new THREE.Matrix4();
 
+  let active = count;
   return {
     group,
+    /** Keep only a fraction of the cars (adaptive-quality floor). */
+    setDensity(k) {
+      active = Math.max(1, Math.round(count * k));
+      bodies.count = active;
+      pools.count = active;
+    },
     update(time) {
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < active; i++) {
         const c = cars[i];
         const L = c.lane;
         const span = L.max - L.min;

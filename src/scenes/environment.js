@@ -5,7 +5,8 @@ import { createGroundMaterial } from '../shaders/ground.js';
 
 export function createEnvironment(shared, quality) {
   const group = new THREE.Group();
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(1700, 32, 16), createSkyMaterial(shared, quality.tier !== 'low'));
+  const skyMat = createSkyMaterial(shared, quality.tier !== 'low');
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(1700, 32, 16), skyMat);
   sky.renderOrder = -10;
   sky.frustumCulled = false;
   group.add(sky);
@@ -28,9 +29,14 @@ export function createEnvironment(shared, quality) {
   return {
     group,
     hemi,
+    /** Adaptive-quality floor: drop rain and cloud noise. */
+    shed() {
+      if (rain) rain.mesh.visible = false;
+      skyMat.uniforms.uClouds.value = 0;
+    },
     update(time, cameraPos, night) {
       hemi.intensity = THREE.MathUtils.lerp(0.8, 0.35, night);
-      if (rain) rain.update(time, cameraPos);
+      if (rain?.mesh.visible) rain.update(time, cameraPos);
     },
   };
 }

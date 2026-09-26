@@ -1,8 +1,6 @@
 // THREADLINE bootstrap: builds the world, wires scroll/UI/audio, runs the frame loop.
-import '@fontsource/anton/latin-400.css';
-import '@fontsource/bangers/latin-400.css';
-import '@fontsource/space-grotesk/latin-400.css';
 import './styles/main.css';
+import { loadFonts } from './core/fonts.js';
 import * as THREE from 'three';
 import { animate } from 'animejs';
 import { detectQuality, createMonitor } from './core/quality.js';
@@ -32,6 +30,7 @@ import { createTouchPad } from './ui/touchPad.js';
 import { revealTitle, titleProgress } from './ui/title.js';
 import { createAudio } from './audio/engine.js';
 
+loadFonts();
 const html = document.documentElement;
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 html.classList.toggle('reduced', reduced);
@@ -205,10 +204,14 @@ function init() {
   overlay.querySelector('[data-rescue-skip]').addEventListener('click', () => RESCUE_ANCHORS.forEach((_, i) => director.rescue.fire(i)));
   window.addEventListener('keydown', (e) => e.key === 'Escape' && exitFree());
 
-  const monitor = createMonitor(quality, stage.dpr, ({ dpr, post }) => {
+  const monitor = createMonitor(quality, stage.dpr, ({ dpr, post, shed }) => {
     stage.setDpr(dpr);
     stage.setPost(post);
-    hooks.downgraded = { dpr, post };
+    if (shed) {
+      world.env.shed();
+      world.traffic.setDensity(0.35);
+    }
+    hooks.downgraded = { dpr, post, shed };
   });
 
   if (new URLSearchParams(location.search).has('debug')) hooks.debug = { scene: stage.scene, stage, world };

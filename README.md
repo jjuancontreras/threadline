@@ -10,10 +10,11 @@ Everything is procedural: the city (instanced towers with glass-curtain or concr
 
 ```bash
 npm install
+npx playwright install chromium   # one-time: browser for verify / perf / gpubench
 npm run dev        # http://localhost:5173
 npm run build      # static build → dist/ (also prints gzipped JS size, fails over 700 KB)
 npm run preview    # serve dist/
-npm test           # physics unit tests (node:test)
+npm test           # unit tests (node:test)
 npm run verify     # Playwright end-to-end verification (needs `npm run build` first)
 node scripts/perf.mjs      # frame-rate + motion-smoothness probe (swing scroll, free swing)
 node scripts/gpubench.mjs  # synchronous GPU cost per chapter and quality tier

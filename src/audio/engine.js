@@ -21,6 +21,7 @@ export function createAudio() {
   let enabled = false;
   let nextBeat = 0;
   let bpm = 0;
+  let boomNoise = null;
 
   function build() {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -109,7 +110,8 @@ export function createAudio() {
       if (!ctx || !enabled) return;
       const t = ctx.currentTime;
       const src = ctx.createBufferSource();
-      src.buffer = noiseBuffer(ctx, 1.2);
+      boomNoise ??= noiseBuffer(ctx, 1.2); // generated once, reused by every boom
+      src.buffer = boomNoise;
       const f = ctx.createBiquadFilter();
       f.type = 'lowpass';
       f.frequency.setValueAtTime(1800, t);

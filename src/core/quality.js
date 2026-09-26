@@ -20,15 +20,31 @@ export function detectQuality(win = window) {
   return { ...TIERS[tier], tier, locked: Boolean(forced) || params.has('lock'), mobile: coarse || small };
 }
 
+/** Lowest render scale the monitor will fall to (sub-native, upscaled by the browser). */
+export const MIN_DPR = 0.75;
+
 /**
- * Rolling-FPS monitor. Calls onDowngrade({dpr, post}) with the next cheaper setting
+ * Next cheaper setting, or null at the floor. Order: DPR down to 1, post-processing off,
+ * DPR below 1, then shed ambient extras (rain, cloud noise, most of the traffic/crowds).
+ * @param {{dpr:number, post:boolean, shed:boolean}} s
+ * @returns {{dpr:number, post:boolean, shed:boolean} | null}
+ */
+export function nextDowngrade(s) {
+  if (s.dpr > 1) return { ...s, dpr: Math.max(1, s.dpr - 0.5) };
+  if (s.post) return { ...s, post: false };
+  if (s.dpr > MIN_DPR) return { ...s, dpr: MIN_DPR };
+  if (!s.shed) return { ...s, shed: true };
+  return null;
+}
+
+/**
+ * Rolling-FPS monitor. Calls onDowngrade({dpr, post, shed}) with the next cheaper setting
  * after the average stays under target for `patience` seconds.
  */
 export function createMonitor(quality, initialDpr, onDowngrade) {
   const target = quality.mobile ? 28 : 42;
   const patience = 2.5;
-  let dpr = initialDpr;
-  let post = quality.post;
+  let state = { dpr: initialDpr, post: quality.post, shed: false };
   let slow = 0;
   let avg = 60;
   let warm = 0;
@@ -42,10 +58,10 @@ export function createMonitor(quality, initialDpr, onDowngrade) {
       if (slow < patience) return;
       slow = 0;
       avg = 60;
-      if (dpr > 1) dpr = Math.max(1, dpr - 0.5);
-      else if (post) post = false;
-      else return;
-      onDowngrade({ dpr, post });
+      const next = nextDowngrade(state);
+      if (!next) return;
+      state = next;
+      onDowngrade(state);
     },
     get fps() {
       return avg;
