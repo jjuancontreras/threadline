@@ -12,6 +12,7 @@ import { simulateSwingPath, annotatePath } from '../physics/swingPath.js';
 import { closestOnTower } from '../physics/anchors.js';
 import { setLight, clearLight, LIGHT } from '../core/shared.js';
 import { fogColorFor } from '../shaders/sky.js';
+import { skyAt, skyAtTime, storySky } from '../core/daycycle.js';
 import { RESCUE_ANCHORS, towersNear } from '../core/layout.js';
 import { slingAnchors, WATCH_SPOT } from './chapters/threat.js';
 
@@ -186,9 +187,19 @@ export function createDirector(w) {
     ctx.showHero(true);
   }
 
+  let freeClock = 0;
+  let wasFree = false;
+  let dayOverride = null; // debug/review: pin the free-mode time of day
+
   function applyGlobals() {
-    w.shared.uNight.value = ctx.night;
-    fogColorFor(ctx.night, fogTmp);
+    const sky = ctx.freeSky || storySky(ctx.night);
+    ctx.sky = sky;
+    w.shared.uNight.value = sky.lights;
+    w.shared.uDay.value = sky.day;
+    w.shared.uGolden.value = sky.golden;
+    w.shared.uSunDir.value.fromArray(sky.sunDir);
+    w.shared.uMoonDir.value.fromArray(sky.moonDir);
+    fogColorFor(sky.lights, fogTmp, sky.day, sky.golden);
     w.shared.uFogColor.value.copy(fogTmp);
     w.lens.set('uBlur', ctx.fx.blur);
     w.lens.set('uLines', ctx.fx.lines);
@@ -206,8 +217,21 @@ export function createDirector(w) {
     get path() {
       return ctx.path;
     },
+    /** Pin the free-mode sky to a phase (0 sunrise, 0.25 noon, 0.5 sunset, 0.75 midnight), or null. */
+    setDayPhase(phase) {
+      dayOverride = phase;
+    },
+    /** Skip the free-mode clock forward (seconds). */
+    advanceDay(seconds) {
+      freeClock += seconds;
+    },
+    get sky() {
+      return ctx.sky;
+    },
     /** Story frame. index 0-4 chapters, 5 = outro. */
     update(dt, time, index, p) {
+      ctx.freeSky = null;
+      wasFree = false;
       ctx._dt = dt;
       ctx.time = time;
       ctx._scrubbingBack = index < prevChapter || (index === prevChapter && p < prevP - 1e-4);
@@ -261,6 +285,10 @@ export function createDirector(w) {
       ctx.time = time;
       resetFrame();
       ctx.night = 1;
+      if (!wasFree) freeClock = 0; // every visit starts just before dawn
+      wasFree = true;
+      freeClock += dt;
+      ctx.freeSky = dayOverride !== null ? skyAt(dayOverride) : skyAtTime(freeClock);
       w.tethers.begin();
       w.hud.chapter('FREE SWING');
       const x = rescue.state ? rescue.state.x : -12.25;

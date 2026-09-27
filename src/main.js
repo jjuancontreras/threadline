@@ -169,6 +169,8 @@ function init() {
   // escape hatch for the scroll lock: fire every remaining tether at once
   overlay.querySelector('[data-rescue-skip]').addEventListener('click', () => RESCUE_ANCHORS.forEach((_, i) => director.rescue.fire(i)));
   window.addEventListener('keydown', (e) => e.key === 'Escape' && exitFree());
+  // free mode: T skips the clock half an hour of "city time" (30 s of the 4-minute day)
+  window.addEventListener('keydown', (e) => e.code === 'KeyT' && modes.freeOn && director.advanceDay(30));
 
   const monitor = createMonitor(quality, stage.dpr, ({ dpr, post, shed }) => {
     stage.setDpr(dpr);
@@ -189,7 +191,10 @@ function init() {
     fireAnchor: (i) => director.rescue.fire(i),
     swingPath: () => director.path.samples.length,
     trickMoments: () => director.trickMoments(),
+    dayPhase: (p) => director.setDayPhase(p),
+    sky: () => director.sky,
     freeGrounded: () => free.grounded,
+    freeWall: () => free.onWall,
   });
 
   revealTitle(overlay, reduced);
@@ -239,7 +244,7 @@ function init() {
       else if (director.rescue.saved) hud.saved(true);
       director.update(dt, time, index, p);
     }
-    world.env.update(time, stage.camera.position, director.ctx.night);
+    world.env.update(time, stage.camera.position, director.sky);
     world.city.update(stage.camera.position);
     world.traffic.update(dt * (reduced ? 0.6 : 1));
     world.crowd.update(dt * (reduced ? 0.6 : 1), world.traffic.clock);

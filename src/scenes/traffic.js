@@ -50,6 +50,8 @@ const carVertex = /* glsl */ `
 `;
 const carFragment = /* glsl */ `
   uniform vec3 uFogColor;
+  uniform float uDay;
+  uniform vec3 uSunDir;
   uniform float uFogDensity;
   varying float vKind;
   varying float vBrake;
@@ -61,8 +63,10 @@ const carFragment = /* glsl */ `
     vec3 v = normalize(cameraPosition - vWorld);
     float fres = pow(1.0 - max(dot(n, v), 0.0), 4.0);
     vec3 col;
-    if (vKind < 0.5) col = vPaint * (0.1 + 0.25 * max(n.y, 0.0)) + vec3(0.12, 0.1, 0.14) * fres * 0.6;
-    else if (vKind < 1.5) col = vec3(0.01, 0.012, 0.018) + vec3(0.25, 0.2, 0.3) * fres;
+    float sun = max(dot(n, uSunDir), 0.0) * step(0.0, uSunDir.y);
+    if (vKind < 0.5) col = mix(vPaint * (0.1 + 0.25 * max(n.y, 0.0)) + vec3(0.12, 0.1, 0.14) * fres * 0.6,
+                               vPaint * (0.9 + 1.6 * sun + 0.5 * max(n.y, 0.0)) + vec3(0.5, 0.55, 0.6) * fres * 0.5, uDay);
+    else if (vKind < 1.5) col = vec3(0.01, 0.012, 0.018) + mix(vec3(0.25, 0.2, 0.3), vec3(0.45, 0.55, 0.7), uDay) * fres;
     else if (vKind < 2.5) col = vec3(3.2, 2.9, 2.4);
     else col = vec3(2.6, 0.08, 0.05) * (1.0 + vBrake * 1.8); // brake lights flare
     float depth = length(vWorld - cameraPosition);
@@ -74,6 +78,7 @@ const carFragment = /* glsl */ `
 `;
 const poolFragment = /* glsl */ `
   uniform vec3 uFogColor;
+  uniform float uDay;
   uniform float uFogDensity;
   varying vec2 vUv;
   varying vec3 vWorld;
@@ -84,7 +89,7 @@ const poolFragment = /* glsl */ `
     float cone = smoothstep(1.0, 0.0, across / (0.35 + along * 0.65)) * (1.0 - along) * smoothstep(0.0, 0.08, along);
     float depth = length(vWorld - cameraPosition);
     float fog = 1.0 - exp(-pow(depth * uFogDensity, 2.0));
-    gl_FragColor = vec4(vec3(1.0, 0.85, 0.62) * cone * 0.32 * (1.0 - fog), 1.0);
+    gl_FragColor = vec4(vec3(1.0, 0.85, 0.62) * cone * 0.32 * (1.0 - fog) * (1.0 - 0.85 * uDay), 1.0);
   }
 `;
 
@@ -101,7 +106,7 @@ export function createTraffic(requested, shared) {
   const geo = carGeometry();
   geo.setAttribute('aPaint', new THREE.InstancedBufferAttribute(paint, 3));
   geo.setAttribute('aBrake', brake);
-  const uniforms = { uFogColor: shared.uFogColor, uFogDensity: shared.uFogDensity };
+  const uniforms = { uFogColor: shared.uFogColor, uFogDensity: shared.uFogDensity, uDay: shared.uDay, uSunDir: shared.uSunDir };
   const bodies = new THREE.InstancedMesh(geo, new THREE.ShaderMaterial({ vertexShader: carVertex, fragmentShader: carFragment, uniforms }), count);
   const poolGeo = new THREE.PlaneGeometry(16, 7).rotateX(-Math.PI / 2).translate(10.2, 0.06, 0);
   const pools = new THREE.InstancedMesh(

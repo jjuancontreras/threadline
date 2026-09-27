@@ -26,6 +26,9 @@ const vertex = /* glsl */ `
 
 const fragment = /* glsl */ `
   uniform float uNight;
+  uniform float uDay;
+  uniform float uGolden;
+  uniform vec3 uSunDir;
   uniform float uTime;
   uniform vec3 uFogColor;
   uniform float uFogDensity;
@@ -49,7 +52,11 @@ const fragment = /* glsl */ `
     float e = clamp(r.y, -0.2, 1.0);
     vec3 horizon = mix(vec3(0.3, 0.14, 0.12), vec3(0.075, 0.05, 0.07), uNight);
     vec3 zenith = mix(vec3(0.06, 0.05, 0.12), vec3(0.008, 0.011, 0.022), uNight);
-    return mix(horizon, zenith, smoothstep(-0.05, 0.5, e));
+    horizon = mix(mix(horizon, vec3(0.8, 0.45, 0.28), uGolden), vec3(0.42, 0.48, 0.56), uDay);
+    zenith = mix(zenith, vec3(0.12, 0.24, 0.48), uDay);
+    vec3 sky = mix(horizon, zenith, smoothstep(-0.05, 0.5, e));
+    float sun = pow(max(dot(r, uSunDir), 0.0), 80.0) * step(0.0, uSunDir.y);
+    return sky + vec3(2.5, 2.1, 1.6) * sun * max(uDay, uGolden);
   }
 
   void main() {
@@ -60,8 +67,10 @@ const fragment = /* glsl */ `
     float glass = step(0.55, fract(vSeed * 7.13)); // ~45% glass curtain walls
     vec3 col;
 
+    float sunLit = max(dot(n, uSunDir), 0.0) * step(-0.05, uSunDir.y);
     if (roof) {
       col = vTint * 0.012 + vec3(0.004, 0.004, 0.006);
+      col = mix(col, vTint * (0.06 + 0.24 * sunLit), uDay);
     } else {
       float u = abs(n.x) > 0.5 ? vWorld.z : vWorld.x;
       float hgt = vWorld.y;
@@ -93,7 +102,10 @@ const fragment = /* glsl */ `
       vec3 concrete = vTint * (0.012 + 0.02 * smoothstep(0.0, 140.0, hgt));
       float moon = max(dot(n, uMoonDir), 0.0);
       concrete += vTint * moon * mix(0.05, 0.02, uNight);
-      vec3 glassBase = vec3(0.006, 0.008, 0.012);
+      // daylight: sky ambient + direct sun, and a warm rake of light at golden hour
+      vec3 dayConcrete = vTint * (0.05 + 0.03 * smoothstep(0.0, 140.0, hgt) + 0.32 * sunLit);
+      concrete = mix(concrete, dayConcrete, uDay) + vTint * vec3(1.0, 0.55, 0.3) * sunLit * uGolden * 0.3;
+      vec3 glassBase = mix(vec3(0.006, 0.008, 0.012), vec3(0.022, 0.032, 0.045), uDay);
       float fres = 0.04 + 0.96 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
       vec3 refl = skyReflect(reflect(-v, n)) * fres * mix(0.25, 1.0, glass);
       vec3 base = mix(concrete, glassBase, glass) + refl;
@@ -138,6 +150,9 @@ export function createTowerMaterial(shared) {
     fragmentShader: fragment,
     uniforms: {
       uNight: shared.uNight,
+      uDay: shared.uDay,
+      uGolden: shared.uGolden,
+      uSunDir: shared.uSunDir,
       uTime: shared.uTime,
       uFogColor: shared.uFogColor,
       uFogDensity: shared.uFogDensity,

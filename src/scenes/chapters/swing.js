@@ -53,6 +53,8 @@ export function swing(ctx, p, dt) {
   if (!trick) ctx.hero.flutter(smoothstep(20, 50, s.speed));
   ctx.hero.pulse(0.4 + smoothstep(25, 50, s.speed));
 
+  // thwip once per line as it fires (cue keys on the anchor, so scrubbing back stays silent)
+  if (s.anchor) ctx.cue(`thwip-${s.anchor.map(Math.round).join(',')}`, sinceAttach < 0.15, () => ctx.audio.thwip(hand === 'L' ? -0.5 : 0.5));
   if (s.anchor) ctx.tether(0, ctx.hero.hand(hand), s.anchor, { extend: clamp(sinceAttach / 0.14), intensity: 1.2 });
 
   const speedK = reduced ? 0 : smoothstep(22, 52, s.speed);

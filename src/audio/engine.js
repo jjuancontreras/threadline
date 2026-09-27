@@ -22,6 +22,7 @@ export function createAudio() {
   let nextBeat = 0;
   let bpm = 0;
   let boomNoise = null;
+  let webNoise = null;
 
   function build() {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -122,6 +123,48 @@ export function createAudio() {
       src.connect(f).connect(g).connect(master);
       src.start(t);
       thump(t, 70, 1.0 * size);
+    },
+    /**
+     * Web shot "thwip": a burst of white noise through a bandpass sweeping 3.8 kHz → 700 Hz
+     * (the hiss of the line) over a short pitched blip (the shooter's click), panned to the hand.
+     * @param {number} pan -1 left … 1 right
+     * @param {number} delay seconds (for the two lines of a slingshot)
+     */
+    thwip(pan = 0, delay = 0) {
+      if (!ctx || !enabled) return;
+      const t = ctx.currentTime + delay;
+      const pitch = 0.9 + Math.random() * 0.2; // no two shots sound identical
+      webNoise ??= noiseBuffer(ctx, 0.3);
+      const src = ctx.createBufferSource();
+      src.buffer = webNoise;
+      const band = ctx.createBiquadFilter();
+      band.type = 'bandpass';
+      band.Q.value = 2.2;
+      band.frequency.setValueAtTime(3800 * pitch, t);
+      band.frequency.exponentialRampToValueAtTime(700 * pitch, t + 0.11);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.55, t + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      const click = ctx.createOscillator();
+      click.type = 'triangle';
+      click.frequency.setValueAtTime(1500 * pitch, t);
+      click.frequency.exponentialRampToValueAtTime(320 * pitch, t + 0.05);
+      const cg = ctx.createGain();
+      cg.gain.setValueAtTime(0.18, t);
+      cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+      const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      const out = panner || master;
+      if (panner) {
+        panner.pan.value = Math.max(-1, Math.min(1, pan));
+        panner.connect(master);
+      }
+      src.connect(band).connect(g).connect(out);
+      click.connect(cg).connect(out);
+      src.start(t);
+      src.stop(t + 0.2);
+      click.start(t);
+      click.stop(t + 0.08);
     },
     zap() {
       if (!ctx || !enabled) return;

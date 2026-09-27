@@ -103,6 +103,10 @@ export function threat(ctx, p) {
   const h = slingshot(ctx, p, last.pos, last.vel);
   ctx.setHero(h.pos, h.weights, { forward: h.forward, up: h.up, trick: h.trick, gait: h.gait, ground: h.ground });
   ctx.hero.pulse(0.4 + Math.sin(ctx.time * 3) * 0.2 + (h.tethers > 0 ? 0.6 : 0));
+  ctx.cue('sling-thwip', h.tethers > 0, () => {
+    ctx.audio.thwip(-0.6);
+    ctx.audio.thwip(0.6, 0.05);
+  });
   if (h.tethers > 0) {
     ctx.tether(0, ctx.hero.hand('R'), ctx.sling[1], { extend: h.tethers, strain: p < B.load ? 0.5 : 0, intensity: 1.3 });
     ctx.tether(1, ctx.hero.hand('L'), ctx.sling[0], { extend: h.tethers, strain: p < B.load ? 0.5 : 0, intensity: 1.3 });

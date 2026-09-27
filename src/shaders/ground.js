@@ -14,6 +14,8 @@ const vertex = /* glsl */ `
 
 const fragment = /* glsl */ `
   uniform float uNight;
+  uniform float uDay;
+  uniform vec3 uSunDir;
   uniform vec3 uFogColor;
   uniform float uFogDensity;
   varying vec3 vWorld;
@@ -54,7 +56,12 @@ const fragment = /* glsl */ `
     float inter = roadX * roadZ;
     float zebra = (1.0 - inter) * step(0.5, fract((p.x + p.y) / 1.2)) *
       (roadX * (1.0 - smoothstep(HALF + 1.0, HALF + 1.3, dz)) * step(HALF, dz) + roadZ * (1.0 - smoothstep(HALF + 1.0, HALF + 1.3, dx)) * step(HALF, dx));
-    col += vec3(0.16, 0.15, 0.13) * max(max(dashZ, dashX), max(aveLine, zebra)) * 0.35;
+    float mark = max(max(dashZ, dashX), max(aveLine, zebra));
+    col += vec3(0.16, 0.15, 0.13) * mark * 0.35;
+    // daylight: sun-bleached asphalt, pale pavement, crisp paint
+    vec3 dayCol = mix(vec3(0.03, 0.03, 0.034), vec3(0.1, 0.097, 0.092) * (0.9 + grit * 0.2), kerb);
+    dayCol = mix(dayCol, vec3(0.04, 0.04, 0.044) * (0.85 + grit * 0.35), road) + vec3(0.3, 0.29, 0.26) * mark * 0.55;
+    col = mix(col, dayCol * (0.55 + 0.45 * max(uSunDir.y, 0.0)), uDay);
 
     // wet asphalt: puddles mirror the (fogged) sky and pick up warm streetlight pools
     float wet = smoothstep(0.52, 0.7, noise(p * 0.08) * 0.7 + noise(p * 0.5) * 0.3) * road;
@@ -65,7 +72,7 @@ const fragment = /* glsl */ `
     float lamps = (lampAlong * max(roadX, kerb) + lampAcross * max(roadZ, kerb)) * uNight;
     vec3 sodium = vec3(0.9, 0.48, 0.16);
     col += sodium * lamps * (0.05 + wet * 0.12);
-    col = mix(col, uFogColor * 1.6 + sodium * lamps * 0.2, wet * (0.25 + fres * 0.6));
+    col = mix(col, uFogColor * mix(1.6, 0.45, uDay) + sodium * lamps * 0.2, wet * (0.25 + fres * 0.6));
 
     float depth = length(vWorld - cameraPosition);
     float fog = 1.0 - exp(-pow(depth * uFogDensity, 2.0));
@@ -79,6 +86,6 @@ export function createGroundMaterial(shared) {
   return new THREE.ShaderMaterial({
     vertexShader: vertex,
     fragmentShader: fragment,
-    uniforms: { uNight: shared.uNight, uFogColor: shared.uFogColor, uFogDensity: shared.uFogDensity },
+    uniforms: { uNight: shared.uNight, uDay: shared.uDay, uSunDir: shared.uSunDir, uFogColor: shared.uFogColor, uFogDensity: shared.uFogDensity },
   });
 }

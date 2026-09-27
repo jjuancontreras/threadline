@@ -41,8 +41,12 @@ URL options: `?q=high|medium|low` forces a quality tier (and locks the adaptive 
 | Story | `M` or the ♪ button | Toggle generative audio (muted by default) |
 | Chapter 5 | Click / tap a glowing anchor ring, or `Tab` to it and press `Enter` | Fire a tether; each anchor brakes the train. Anchors auto-fire after a timeout, so the story always resolves; **SKIP ›** fires them all at once |
 | After the rescue | `F`, the rail's **F** button, or "Enter free swing" | Free swing mode |
-| Free swing | Hold mouse button (or touch) | Fire a tether at the nearest building along the aim (the hand on that side throws it); the rope reels in while held |
+| Free swing | Hold mouse button / touch (or hold `Space` in the air) | Swing. No aiming: the line auto-targets a building ahead in the direction you steer with WASD, from the hand on that side. Keep holding to chain swings (it lets go at the top of each arc and re-attaches ahead) |
 | Free swing | Release | Let go, keeping your momentum (a trick at speed: twisting flip, lazy roll, corkscrew, scissor kick, layout backflip) |
+| Free swing | `W` / `A` / `D` in the air | Steer the swing: straight on, bank left, bank right |
+| Free swing | `Shift` + `W` into a wall, or fly into one | Wall-run: `W`/`S` climb and descend, `A`/`D` run sideways (wrapping round corners), `Shift` runs, `Space` kicks off; top out to vault onto the roof. A fast glancing hit becomes a horizontal wall-run |
+| Free swing | `T` | Skip the 4-minute day/night clock forward |
+| Any | ♪ button / `M` | Sound on: wind, heartbeat, impacts and a "thwip" every time a web fires |
 | Free swing | `W` / `S` on the ground | Walk forward / back (streets and rooftops) |
 | Free swing | `Shift` + `W` | Run — builds from a jog to a 26 m/s bounding sprint |
 | Free swing | `A` / `D` | Turn on the ground; steer in the air |

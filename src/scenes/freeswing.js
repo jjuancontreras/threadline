@@ -1,15 +1,19 @@
-// FREE SWING: hold to fire a tether at the nearest building along the aim (the hand on that
-// side throws it), release to let go (momentum preserved, auto-trick at speed).
-// On foot: W walks, Shift runs (builds to a sprint), A/D turn; hold Space to crouch and charge a
-// super jump (tap for a hop). E fires a line from each hand to the buildings either side and
-// slingshots up and forward — or, next to a prop (crane pipe, lamp post), uses it instead.
-// Q performs a trick in the air. Touch: tap-hold fires, lift releases; the pad drives press().
-import * as THREE from 'three';
+// FREE SWING, Insomniac-style: hold the mouse (or Space in the air) to swing — the line is
+// auto-targeted onto a building ahead in the direction you are steering with WASD, the hand on
+// that side throws it, and while you keep holding the swing chains: let go at the top of each
+// arc, re-attach ahead. Release to fly (momentum kept, auto-trick at speed).
+// On foot: W walks, Shift runs, A/D turn; hold Space to charge a super jump (tap to hop).
+// Sprint into a wall — or fly into one — to wall-run: W/S climb, A/D strafe (wrapping round
+// corners), Shift runs, Space kicks off; top out to vault onto the roof.
+// E: two-handed slingshot, or the nearby prop's action (crane pipe run, lamp-post whirl).
+// Q performs a trick in the air. Touch: hold to swing; the pad drives press().
 import { createSwinger, step, attach, release, velocity } from '../physics/swinger.js';
-import { pickAnchor } from '../physics/anchors.js';
+import { pickSwingAnchor, desiredDirection } from '../physics/anchors.js';
 import { pickSlingPair, jumpSpeed, jumpCharge, leftOf, SLINGSHOT } from '../physics/sling.js';
+import { enterWall, stepWall, wallJump } from '../physics/wallrun.js';
+import { wallFrame } from './free/wallMode.js';
 import { towersNear } from '../core/layout.js';
-import { vNorm, vAdd, vScale, vSub, vLen, vLerp, vDot, smoothstep, clamp, lerp } from '../core/math.js';
+import { vNorm, vAdd, vScale, vSub, vLen, vLerp, smoothstep, clamp, lerp } from '../core/math.js';
 import { TRICKS, trickAt, TRICK_TIME } from '../characters/tricks.js';
 import { gaitRate } from '../characters/poses.js';
 import { slingMove, fadingLines } from './free/moves.js';
@@ -20,13 +24,35 @@ const SPAWN_VEL = [0, 4, 24];
 export const RUN = { walk: 4.2, sprint: 26, accelWalk: 5, accelSprint: 1.8, brake: 6, turn: 2.8, turnSprint: 1.5 };
 const KEYS = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b', KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r', Space: 'u', ShiftLeft: 's', ShiftRight: 's', KeyQ: 'q', KeyE: 'e' };
 
+/** Swing assist: kick off the ground/wall into a swing; chain swings while the button is held. */
+const ASSIST = {
+  groundKick: 9, // m/s forward when a swing starts from the ground (leap first, line near the top)
+  groundUp: 21, // m/s up
+  holdWhileRising: 7, // m/s: while rising faster than this near the street, wait for the apex
+  lowAlt: 22, // m
+  clearance: 3, // m: every line reels in until the bottom of its arc clears the street
+  clearReel: 26, // m/s reel-in speed to reach that clearance
+  chainAfter: 0.35,
+  chainAhead: 0.35,
+  apexVy: 3,
+  chainLift: 2.5,
+  lateralDamp: 0.09, // per (m/s) of sideways drift while on a line: keeps the swing going where you steer
+  boostCap: 28, // m/s: boosts only help you get up to swinging speed
+  backswing: 0.8, // s: a line that starts carrying you backwards lets go
+  attachBoost: 4, // m/s added along the steering direction as a line bites (momentum builds)
+  chainBoost: 4, // m/s added when a chained swing lets go
+  rearm: 0.1,
+};
+const PROP_KINDS = new Set(['tank', 'unit', 'barrels', 'crane']); // roof clutter: not wall-runnable
+const WALL_MIN = 12; // m — only real building faces taller than this
+
 const rotateY = (h, a) => vNorm([h[0] * Math.cos(a) - h[2] * Math.sin(a), 0, h[0] * Math.sin(a) + h[2] * Math.cos(a)]);
 
 /**
- * @param {{towers: object[], camera: THREE.Camera, canvas: HTMLElement, reduced: boolean,
- *   onMiss?: () => void, props?: {colliders: object[], actionNear?: Function}}} deps
+ * @param {{towers: object[], reduced: boolean, onMiss?: () => void, onPrompt?: (label:string|null) => void,
+ *   props?: {colliders: object[], actionNear?: Function}}} deps
  */
-export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPrompt, props = null }) {
+export function createFreeSwing({ towers, reduced, onMiss, onPrompt, props = null }) {
   const world = props?.colliders?.length ? [...towers, ...props.colliders] : towers;
   let s = createSwinger(SPAWN, SPAWN_VEL, DT);
   let prevPos = [...SPAWN];
@@ -54,33 +80,79 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
   let fade = null;
   let lastMoveEnd = -1;
   let promptTimer = 0;
-  const pointer = new THREE.Vector2(0, 0.25);
+  let wall = null; // wall-run state (physics/wallrun.js) while on a facade
+  let wallAcc = 0;
+  let wallGait = 0;
+  let wallCooldown = -1; // no re-sticking right after kicking off
+  let lastRelease = -1;
+  let ropeTarget = 0; // rope length the current line reels in to (arc clears the street)
+  let sfx = null; // audio engine (set each frame from ctx)
   const held = new Set();
-  const ray = new THREE.Raycaster();
-  const stats = { fired: 0, released: 0, misses: 0, distance: 0, maxSpeed: 0, tricks: 0, groundTime: 0, groundDistance: 0, slings: 0, jumps: 0, maxJump: 0, actions: 0 };
+  const stats = { fired: 0, released: 0, misses: 0, distance: 0, maxSpeed: 0, tricks: 0, groundTime: 0, groundDistance: 0, slings: 0, jumps: 0, maxJump: 0, actions: 0, wallRuns: 0, wallTime: 0, chained: 0 };
 
-  const aimDir = () => {
-    ray.setFromCamera(pointer, camera);
-    const d = ray.ray.direction;
-    return vNorm([d.x, d.y + 0.6, d.z]); // bias upward: tethers go to rooftops, not the street
-  };
+  const keys = () => ({ f: held.has('f'), b: held.has('b'), l: held.has('l'), r: held.has('r') });
+  /** Swing button: the mouse / touch hold, or Space while airborne (Space on the ground charges a jump). */
+  const swingHeld = () => holding || (held.has('u') && !charge && !s.grounded && !wall);
 
-  /** Throw a swing line along the aim; the hand on the anchor's side throws it. */
+  /** Hand the body back to physics at a position/velocity (after a wall-run or a kick-off). */
+  function toPhysics(pos, vel, grounded = false) {
+    s = { ...createSwinger(pos, vel, DT), grounded };
+    prevPos = [...pos];
+    acc = 0;
+    wasGrounded = grounded;
+  }
+
+  /** Auto-targeted swing line toward where the player is steering; the hand on that side throws it. */
   function fire(time) {
-    const hit =
-      pickAnchor(s.pos, aimDir(), near, { reach: 50, maxDist: 150, maxAngle: 1.2, minRise: 10 }) ||
-      pickAnchor(s.pos, aimDir(), near, { reach: 55, maxDist: 160, maxAngle: 1.35 });
+    const want = desiredDirection(heading, keys(), velocity(s, DT));
+    const hit = pickSwingAnchor(s.pos, velocity(s, DT), want, near);
     if (!hit) {
       stats.misses++;
       onMiss?.();
-      return;
+      return false;
     }
-    hand = vDot(vSub(hit.point, s.pos), leftOf(heading)) > 0 ? 'L' : 'R';
+    if (wall) {
+      const j = wallJump(wall); // spring off the facade into the swing
+      wall = null;
+      wallCooldown = time + 0.3;
+      toPhysics(j.pos, j.vel);
+    } else if (s.grounded) {
+      // leap first: a line from street level would drag the arc along the asphalt
+      const v = velocity(s, DT);
+      toPhysics(s.pos, vAdd(vAdd([v[0], 0, v[2]], vScale(want, ASSIST.groundKick)), [0, ASSIST.groundUp, 0]));
+      jumpTime = time;
+      return true;
+    }
+    hand = hit.side;
     s = attach(s, hit.point, 1.0);
+    if (vLen(velocity(s, DT)) < ASSIST.boostCap) s = { ...s, prev: vSub(s.prev, vScale(want, ASSIST.attachBoost * DT)) };
+    ropeTarget = Math.min(s.ropeLength, Math.max(hit.point[1] - ASSIST.clearance, 8));
+    sfx?.thwip(hand === 'L' ? -0.5 : 0.5);
     fireTime = time;
     trick = null;
     charge = null;
     stats.fired++;
+    return true;
+  }
+
+  /** While the swing is held: let go near the top of the forward arc so the next line can chain. */
+  function chainSwing(time) {
+    if (!s.anchor || time - fireTime < ASSIST.chainAfter) return;
+    const v = velocity(s, DT);
+    const flat = vLen([v[0], 0, v[2]]);
+    if (flat < 4) return;
+    const want = desiredDirection(heading, keys(), v);
+    const rel = vSub(s.pos, s.anchor);
+    const ahead = rel[0] * want[0] + rel[2] * want[2];
+    const goingBack = v[0] * want[0] + v[2] * want[2] < 2 && time - fireTime > ASSIST.backswing;
+    const pastTop = ahead > s.ropeLength * ASSIST.chainAhead && v[1] < ASSIST.apexVy;
+    const overTop = s.pos[1] > s.anchor[1] - 2; // never loop over the anchor
+    if (!pastTop && !goingBack && !overTop) return;
+    s = release(s, DT, vLen(v) < ASSIST.boostCap ? ASSIST.chainBoost : 0);
+    s = { ...s, prev: vSub(s.prev, [0, ASSIST.chainLift * DT, 0]) }; // a little pop off the top
+    lastRelease = time;
+    stats.released++;
+    stats.chained++;
   }
 
   function startTrick(time, kind) {
@@ -94,18 +166,53 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
     if (!s.anchor) return;
     const fast = vLen(velocity(s, DT)) > 20;
     s = release(s, DT, 3);
+    lastRelease = now;
     stats.released++;
     if (fast && !reduced) startTrick(now);
+  }
+
+  /** Enter a wall-run from a physics contact with a building face. */
+  function stickToWall(t, climb) {
+    wall = enterWall(t, s.pos, velocity(s, DT), climb ? { climb } : {});
+    wallAcc = 0;
+    trick = null;
+    charge = null;
+    stats.wallRuns++;
+  }
+
+  /** Physics hand-back from the wall (vault onto the roof, step onto the street, kick off). */
+  function leaveWall(exit, event) {
+    wall = null;
+    wallCooldown = now + (event === 'jump' ? 0.35 : 0.25);
+    toPhysics(exit.pos, exit.vel, event === 'ground');
+    if (event === 'vault') landTime = now;
+  }
+
+  function stepWallMode(dt) {
+    const input = {
+      up: (held.has('f') ? 1 : 0) - (held.has('b') ? 1 : 0),
+      side: (held.has('r') ? 1 : 0) - (held.has('l') ? 1 : 0),
+      fast: held.has('s'),
+    };
+    wallAcc += Math.min(dt, 0.1);
+    while (wall && wallAcc >= DT) {
+      wallAcc -= DT;
+      const r = stepWall(wall, input, DT);
+      if (r.exit) leaveWall(r.exit, r.event);
+      else wall = r.w;
+    }
   }
 
   /** E: a nearby prop's action if there is one, otherwise the two-handed slingshot. */
   function action() {
     if (move || now - lastMoveEnd < SLINGSHOT.cooldown) return;
+    if (wall) leaveWall({ pos: wall.pos, vel: [wall.n[0] * 3, 0, wall.n[2] * 3] }, 'jump');
     const prop = props?.actionNear?.(s.pos, heading, velocity(s, DT));
     if (prop) {
       move = prop.start(s.pos, velocity(s, DT));
       onPrompt?.(null);
       stats.actions++;
+      if (prop.kind === 'pipe') sfx?.thwip(0.4);
     } else {
       const pair = pickSlingPair(s.pos, heading, near);
       if (!pair) {
@@ -115,21 +222,18 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
       }
       move = slingMove(s.pos, heading, pair, velocity(s, DT), s.grounded ? s.groundY : null);
       stats.slings++;
+      sfx?.thwip(-0.6);
+      sfx?.thwip(0.6, 0.05);
     }
     if (s.anchor) s = release(s, DT, 0);
     trick = null;
     charge = null;
   }
 
-  const setPointer = (e) => {
-    const r = canvas.getBoundingClientRect();
-    pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-  };
   window.addEventListener(
     'pointerdown',
     (e) => {
       if (!active || e.button > 0 || e.target.closest?.('button, a, [data-ui]')) return;
-      setPointer(e);
       holding = true;
       lastTry = -1;
       e.preventDefault();
@@ -143,7 +247,6 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
   };
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointercancel', onUp);
-  window.addEventListener('pointermove', (e) => active && setPointer(e));
 
   /** Press/release one control ('f','b','l','r','u','s','q','e'); shared by keyboard and touch pad. */
   function press(key, down) {
@@ -153,11 +256,15 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
     else held.delete(key);
     if (down && !was && key === 'q' && !reduced) startTrick(now);
     if (down && !was && key === 'e') action();
+    if (key === 'u' && down && !was && wall) {
+      leaveWall(wallJump(wall), 'jump');
+      return;
+    }
     if (key === 'u' && down && !was && s.grounded && !s.anchor && !move) charge = { t0: now };
     if (key === 'u' && !down && charge) {
       jumpReq = jumpSpeed(now - charge.t0);
       charge = null;
-    }
+    } else if (key === 'u' && !down && !holding) letGo(); // Space was the swing button in the air
   }
   const onKey = (down) => (e) => {
     if (!active || !KEYS[e.code]) return;
@@ -205,7 +312,16 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
     if (held.has('b')) c = vSub(c, heading);
     if (held.has('r')) c = vAdd(c, right);
     if (held.has('l')) c = vSub(c, right);
-    return vLen(c) > 0 ? vNorm(c) : c;
+    c = vLen(c) > 0 ? vNorm(c) : c;
+    if (s.anchor) {
+      // swing assist: cancel sideways drift relative to where the player is steering
+      const v = velocity(s, DT);
+      const want = desiredDirection(heading, keys(), v);
+      const along = v[0] * want[0] + v[2] * want[2];
+      const lateral = [v[0] - want[0] * along, 0, v[2] - want[2] * along];
+      c = vSub(c, vScale(lateral, ASSIST.lateralDamp));
+    }
+    return c;
   }
 
   function simulate(dt, time) {
@@ -221,8 +337,23 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
       const onFoot = s.grounded && !s.anchor;
       if (onFoot) groundMove(DT);
       const vy = velocity(s, DT)[1];
-      const reel = Boolean(s.anchor) && s.ropeLength > 12;
-      s = step(s, DT, { towers: near, control: s.grounded ? [0, 0, 0] : airControl(), reel, reelSpeed: 7, friction: !onFoot });
+      const clearing = Boolean(s.anchor) && s.ropeLength > ropeTarget + 0.05;
+      const reel = clearing; // auto-targeted lines are sized for the arc: no manual pump
+      const vBefore = velocity(s, DT);
+      s = step(s, DT, { towers: near, control: s.grounded ? [0, 0, 0] : airControl(), reel, reelSpeed: ASSIST.clearReel, friction: !onFoot });
+      const t = s.wall;
+      if (t && !s.anchor && !move && now > wallCooldown && !PROP_KINDS.has(t.kind) && t.h > WALL_MIN && t.h - s.pos[1] > 1.5) {
+        if (!onFoot) {
+          // flew into a facade: cling (a fast, glancing hit becomes a horizontal wall-run)
+          s = { ...s, prev: vSub(s.pos, vScale(vBefore, DT)) };
+          stickToWall(t, 0);
+          return;
+        }
+        if (held.has('f') && held.has('s')) {
+          stickToWall(t, Math.max(vLen([vBefore[0], 0, vBefore[2]]), 10)); // sprint into it: run straight up
+          return;
+        }
+      }
       if (s.grounded && !wasGrounded) {
         if (-vy > 7) landTime = time;
         trick = null;
@@ -235,7 +366,7 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
   function heroPose(time, v) {
     const flat = [v[0], 0, v[2]];
     const flatSpeed = vLen(flat);
-    if (!s.grounded && flatSpeed > 3) heading = vNorm(vLerp(heading, vNorm(flat), 0.05));
+    if (!s.grounded && flatSpeed > 3) heading = vNorm(vLerp(heading, vNorm(flat), s.anchor ? 0.012 : 0.03));
     if (s.anchor) {
       const shoot = 1 - smoothstep(0, 0.22, time - fireTime);
       const up = vNorm(vAdd(vScale(vNorm(vSub(s.anchor, s.pos)), 0.62), vScale(vNorm(v), 0.5)));
@@ -322,6 +453,10 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
     get charging() {
       return chargeK();
     },
+    /** 'climb' | 'hrun' while wall-running, else null. */
+    get onWall() {
+      return wall ? wall.mode : null;
+    },
     press,
     /** Put the hero somewhere (review scripts / debug). */
     place(pos, vel = [0, 0, 0], face = null) {
@@ -330,6 +465,7 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
       if (face) heading = vNorm([face[0], 0, face[2]]);
       move = null;
       trick = null;
+      wall = null;
       near = towersNear(world, s.pos, 170);
     },
     enter() {
@@ -342,6 +478,7 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
       trick = null;
       move = null;
       charge = null;
+      wall = null;
     },
     exit() {
       active = false;
@@ -353,6 +490,25 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
     },
     update(dt, ctx) {
       now = ctx.time;
+      sfx = ctx.audio;
+      if (wall && swingHeld()) fire(now);
+      if (wall) {
+        stepWallMode(dt);
+        if (wall) {
+          wallGait += gaitRate(Math.hypot(wall.v[0], wall.v[1])) * dt;
+          stats.wallTime += dt;
+          const f = wallFrame(wall, wallGait);
+          s = { ...s, pos: [...wall.pos], prev: [...wall.pos] };
+          prevPos = s.pos;
+          ctx.setHero(f.pos, f.weights, { up: f.up, forward: f.forward, gait: f.gait });
+          ctx.hero.pulse(0.5 + smoothstep(4, 16, f.speed));
+          ctx.readout(f.speed * 3.6, wall.pos[1]);
+          ctx.wind = smoothstep(4, 20, f.speed) * 0.4;
+          ctx.fx.lines = f.shot.k;
+          ctx.shot(f.shot);
+          return;
+        }
+      }
       if (move) {
         const f = stepMove(dt, ctx);
         if (move || !f.done) {
@@ -372,10 +528,12 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPro
         promptTimer = 0.15;
         onPrompt?.(props.actionNear(s.pos, heading)?.label ?? null);
       }
-      if (holding && !s.anchor && ctx.time - lastTry > 0.25) {
+      const rising = velocity(s, DT)[1] > ASSIST.holdWhileRising && s.pos[1] < ASSIST.lowAlt && !s.grounded;
+      if (swingHeld() && !s.anchor && !rising && ctx.time - lastTry > 0.2 && ctx.time - lastRelease > ASSIST.rearm) {
         lastTry = ctx.time;
         fire(ctx.time);
       }
+      if (swingHeld()) chainSwing(ctx.time);
       const before = s.pos;
       simulate(dt, ctx.time);
       // render between the last two physics states so motion is smooth at any refresh rate

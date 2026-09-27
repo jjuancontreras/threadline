@@ -4,7 +4,10 @@ import { MAX_LIGHTS } from '../shaders/tower.js';
 
 export function createShared() {
   return {
-    uNight: { value: 0 },
+    uNight: { value: 0 }, // artificial light on (windows, lamps)
+    uDay: { value: 0 }, // daylight (free-mode day/night cycle; 0 throughout the story)
+    uGolden: { value: 0 }, // sunrise / sunset warmth
+    uSunDir: { value: new THREE.Vector3(0.3, -0.8, -0.5).normalize() },
     uTime: { value: 0 },
     uFogColor: { value: new THREE.Color(0.1, 0.08, 0.12) },
     uFogDensity: { value: 0.0019 },

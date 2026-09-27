@@ -37,6 +37,7 @@ export function createRescueController(ctx) {
 
   function onFired(f) {
     fireTimes[f.index] = ctx.time;
+    ctx.audio.thwip(0.2);
     ctx.audio.zap();
     ctx.shake.add(0.35);
     ctx.comic.word('TZING', { x: 30 + f.index * 12, y: 30 + (f.index % 2) * 14, color: '#ff4d3a', size: 0.55, tilt: -6 });

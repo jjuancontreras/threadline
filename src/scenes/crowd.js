@@ -92,6 +92,8 @@ const vertex = /* glsl */ `
 
 const fragment = /* glsl */ `
   uniform vec3 uFogColor;
+  uniform float uDay;
+  uniform vec3 uSunDir;
   uniform float uFogDensity;
   varying vec3 vColor;
   varying vec3 vNormal;
@@ -102,6 +104,7 @@ const fragment = /* glsl */ `
     float fres = pow(1.0 - abs(dot(n, v)), 3.0);
     // storefront + sodium spill from below/side, cool sky from above
     vec3 col = vColor * (0.4 + 0.28 * max(n.y, 0.0)) + vec3(0.09, 0.05, 0.025) * (1.0 - abs(n.y)) + vec3(0.05, 0.06, 0.09) * fres;
+    col = mix(col, vColor * (1.4 + 2.2 * max(dot(n, uSunDir), 0.0) * step(0.0, uSunDir.y) + 0.6 * max(n.y, 0.0)) + vec3(0.1, 0.12, 0.15) * fres, uDay);
     float depth = length(vWorld - cameraPosition);
     float fog = 1.0 - exp(-pow(depth * uFogDensity, 2.0));
     gl_FragColor = vec4(mix(col, uFogColor, clamp(fog, 0.0, 1.0)), 1.0);
@@ -137,7 +140,7 @@ export function createCrowd(count, shared) {
 
   const mesh = new THREE.InstancedMesh(
     geo,
-    new THREE.ShaderMaterial({ vertexShader: vertex, fragmentShader: fragment, uniforms: { uFogColor: shared.uFogColor, uFogDensity: shared.uFogDensity } }),
+    new THREE.ShaderMaterial({ vertexShader: vertex, fragmentShader: fragment, uniforms: { uFogColor: shared.uFogColor, uFogDensity: shared.uFogDensity, uDay: shared.uDay, uSunDir: shared.uSunDir } }),
     count,
   );
   mesh.frustumCulled = false;

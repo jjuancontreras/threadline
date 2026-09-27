@@ -66,3 +66,43 @@ test('a tapped jump hops, a held jump charges up to a super jump', () => {
   assert.equal(jumpCharge(0), 0);
   assert.equal(jumpCharge(10), 1);
 });
+
+import { pickSwingAnchor, desiredDirection } from '../src/physics/anchors.js';
+
+const canyon = [
+  { x: -22, z: -60, w: 12, d: 30, h: 90 },
+  { x: 22, z: -60, w: 12, d: 30, h: 80 },
+  { x: -22, z: 60, w: 12, d: 30, h: 90 }, // behind the hero
+];
+
+test('auto swing anchors land ahead and above, on a flanking building', () => {
+  const pos = [0, 30, 0];
+  const a = pickSwingAnchor(pos, [0, 0, -20], [0, 0, -1], canyon);
+  assert.ok(a, 'expected an anchor');
+  assert.ok(a.point[2] < -3, 'ahead of the hero');
+  assert.ok(a.point[1] > pos[1] + 7, 'above the hero');
+  assert.ok(Math.abs(a.point[0]) >= 10, 'on a building face beside the street');
+});
+
+test('auto swing follows the wanted direction, not the camera', () => {
+  const pos = [0, 30, 0];
+  const back = pickSwingAnchor(pos, [0, 0, 0], [0, 0, 1], canyon);
+  assert.ok(back && back.point[2] > 3, 'turned around: anchors on the building behind');
+  assert.equal(pickSwingAnchor(pos, [0, 0, 0], [1, 0, 0], [canyon[2]]), null, 'nothing that way → no line');
+});
+
+test('the side of the anchor picks the hand', () => {
+  const a = pickSwingAnchor([0, 30, 0], [0, 0, -20], [0, 0, -1], [canyon[0]]); // building on the -x side
+  // facing -z, left is -x: a building at -x is on the hero's left
+  assert.equal(a.side, 'L');
+});
+
+test('desired direction comes from WASD relative to the heading, or keeps the momentum', () => {
+  const h = [0, 0, -1];
+  assert.deepEqual(desiredDirection(h, { f: true }, [0, 0, 0]), [0, 0, -1]);
+  const left = desiredDirection(h, { l: true }, [0, 0, 0]);
+  assert.ok(left[0] < -0.99, 'A steers left (-x when facing -z)');
+  const diag = desiredDirection(h, { f: true, r: true }, [0, 0, 0]);
+  assert.ok(diag[0] > 0.4 && diag[2] < -0.6);
+  assert.deepEqual(desiredDirection(h, {}, [10, 0, 0]), [1, 0, 0]);
+});

@@ -87,7 +87,12 @@ async function freeSwing(page, vp) {
     await sleep(500);
   }
   // drop to a surface, then run on foot (W + Shift) and turn
-  await waitFor(page, 't.freeGrounded()', 15000, 'free swing landing');
+  // drop to a surface; flying into a facade makes the hero cling (wall-run), so kick off walls
+  for (let t = 0; t < 30000 && !(await hook(page, 't.freeGrounded()')); t += 300) {
+    if (await hook(page, 't.freeWall()')) await page.keyboard.press('Space');
+    await sleep(300);
+  }
+  await waitFor(page, 't.freeGrounded()', 1000, 'free swing landing');
   const groundStart = await hook(page, 't.free.groundDistance');
   await page.keyboard.down('KeyW');
   await page.keyboard.down('ShiftLeft');

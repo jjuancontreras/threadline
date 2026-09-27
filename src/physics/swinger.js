@@ -47,6 +47,7 @@ function collideTowers(pos, prev, towers, friction = true) {
   let p = pos;
   let q = prev;
   let roof = null;
+  let side = null; // tower whose wall pushed us out sideways (wall-run contact)
   for (const t of towers) {
     const inX = Math.abs(p[0] - t.x) < t.w + r;
     const inZ = Math.abs(p[2] - t.z) < t.d + r;
@@ -63,13 +64,15 @@ function collideTowers(pos, prev, towers, friction = true) {
       const x = t.x + Math.sign(p[0] - t.x) * (t.w + r);
       p = [x, p[1], p[2]];
       q = [x, q[1], q[2]];
+      side = t;
     } else {
       const z = t.z + Math.sign(p[2] - t.z) * (t.d + r);
       p = [p[0], p[1], z];
       q = [q[0], q[1], z];
+      side = t;
     }
   }
-  return [p, q, roof];
+  return [p, q, roof, side];
 }
 
 /**
@@ -99,9 +102,10 @@ export function step(s, dt, opts = {}) {
 
   let grounded = false;
   let groundY = null;
+  let wall = null;
   if (opts.towers) {
     let roof;
-    [pos, prev, roof] = collideTowers(pos, prev, opts.towers, opts.friction !== false);
+    [pos, prev, roof, wall] = collideTowers(pos, prev, opts.towers, opts.friction !== false);
     if (roof !== null) {
       grounded = true;
       groundY = roof;
@@ -115,5 +119,5 @@ export function step(s, dt, opts = {}) {
     grounded = true;
     groundY = 0;
   }
-  return { ...s, pos, prev, ropeLength, grounded, groundY };
+  return { ...s, pos, prev, ropeLength, grounded, groundY, wall };
 }
