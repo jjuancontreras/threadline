@@ -15,6 +15,7 @@ import { createTrain } from './scenes/train.js';
 import { createTraffic } from './scenes/traffic.js';
 import { createCrowd } from './scenes/crowd.js';
 import { createProps } from './scenes/props.js';
+import { createLandmarks } from './scenes/landmarks.js';
 import { createMothership } from './scenes/mothership.js';
 import { GANTRY_SPOT } from './scenes/chapters/threat.js';
 import { createDirector } from './scenes/director.js';
@@ -73,13 +74,14 @@ function buildWorld(stage, quality) {
   const city = createCity(towers, shared, quality);
   const traffic = createTraffic({ high: 2200, medium: 1100, low: 380 }[quality.tier], shared);
   const props = createProps(towers, city);
+  const landmarks = createLandmarks(towers, shared, quality);
   const crowd = createCrowd({ high: 2400, medium: 1200, low: 360 }[quality.tier], shared);
   const mothership = createMothership(shared, towers, GANTRY_SPOT);
   scene.add(env.group, city.group, track.group, train.group, hero.root, gantry.root, container, tethers.group);
   scene.add(bursts.dust.points, bursts.sparks.points, bursts.embers.points, bursts.puff.points, bursts.debris.mesh);
-  scene.add(traffic.group, crowd.group, props.group, mothership.group, ...gantry.lights);
+  scene.add(traffic.group, crowd.group, props.group, landmarks.group, mothership.group, ...gantry.lights);
   scene.add(...hero.capeMeshes);
-  return { shared, towers, env, city, traffic, crowd, props, mothership, track, train, hero, gantry, container, tethers, bursts, pixel };
+  return { shared, towers, env, city, traffic, crowd, props, landmarks, mothership, track, train, hero, gantry, container, tethers, bursts, pixel };
 }
 
 /** Compile every material up front so later chapters don't hitch on first reveal. */
@@ -225,7 +227,8 @@ function init() {
   function step(ms) {
     const tA = performance.now();
     timer.update(ms);
-    const dt = Math.min(timer.getDelta(), 0.1);
+    // clamp: the first rAF timestamp can precede the timer's start (a negative delta)
+    const dt = Math.min(Math.max(timer.getDelta(), 0), 0.1);
     time += dt;
     scroll.raf(ms);
     world.shared.uTime.value = time;
@@ -249,6 +252,7 @@ function init() {
     world.traffic.update(dt * (reduced ? 0.6 : 1));
     world.crowd.update(dt * (reduced ? 0.6 : 1), world.traffic.clock);
     world.props.update(time);
+    world.landmarks.update(time);
     const tB = performance.now();
     if (hooks.debug?.cam) {
       // ?debug only: orbit a fixed camera around the hero for turnaround captures

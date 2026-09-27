@@ -2,6 +2,7 @@
 // Units are meters. Towers are axis-aligned boxes {x, z, w, d, h} where
 // (x, z) is the footprint center, w/d are HALF extents and h is roof height.
 import { rng } from './math.js';
+import { keepCoreTower, landmarkTowers, districtTowers, farShoreTowers } from './manhattan.js';
 
 export const WORLD = {
   avenue: { halfWidth: 24, zStart: 60, zEnd: -470 },
@@ -90,6 +91,7 @@ export function generateTowers(density = 1, seed = 1337) {
   ];
   const towers = [...fixed];
   for (const f of CANYON_FLANKS) if (!towers.some((o) => overlaps(o, f, 1))) towers.push(f);
+  const storyCount = towers.length; // everything before this index is hand-placed for the story
   const block = 46;
   for (let bx = -420; bx <= 420; bx += block) {
     for (let bz = -980; bz <= 220; bz += block) {
@@ -116,7 +118,12 @@ export function generateTowers(density = 1, seed = 1337) {
       }
     }
   }
-  return towers;
+  // Manhattan around the story core: trim the fill to the island (off the rivers, the park and
+  // the landmark plots), then add the landmarks, the uptown districts and the far shores.
+  const story = towers.slice(0, storyCount);
+  const extra = [...landmarkTowers(), ...districtTowers(density)];
+  const fill = towers.slice(storyCount).filter((t) => keepCoreTower(t) && !extra.some((e) => overlaps(e, t)));
+  return [...story, ...fill, ...extra, ...farShoreTowers(density)];
 }
 
 /** Towers the hero can collide with / anchor to near a point (cheap XZ filter). */

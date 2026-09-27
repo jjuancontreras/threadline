@@ -151,3 +151,23 @@ At the owner's request, for a private, unpublished build, the hero now wears a r
   - roof tanks, AC units, barrels and crane masts are colliders: land, perch and web to them
   - three cranes each hang a ring-lit pipe. E near a mouth web-zips into the pipe, corkscrews down the bore with the camera inside and launches out of the far end
   - E near a lamp post or antenna whirls 1 to 1.5 turns and releases on the tangent that matches the heading
+
+## 12. Revision 6 (2026-09-28): day/night, auto-swing, wall-running, Manhattan
+
+- **Day/night** (`core/daycycle.js`): a 4-minute clock gives the sun elevation, which drives four shared numbers: daylight, golden-hour warmth, artificial lights and the sun direction.
+  - Every shader and the key light read those numbers: sky (sun disc, sunlit clouds), fog, facades (sun diffuse, sky and sun reflections in glass), streets, cars, crowds, rivers.
+  - The story keeps its authored dusk-to-night.
+- **Web sound**: a procedural "thwip" (white noise through a bandpass swept from 3.8 kHz down to 700 Hz, plus a pitched click), panned toward the throwing hand.
+- **Auto-targeted swinging, as in Insomniac's games**: the player never aims. Each line lands on a facade ahead of and above the hero, toward the WASD direction and off a flanking building.
+  - Holding the button chains swings: let go past the top of the arc, re-attach ahead.
+  - While on a line, sideways drift relative to the steering direction is damped.
+  - A swing started on the street leaps first, and every line reels in until its arc clears the asphalt.
+  - Boosts stop at 28 m/s so chained arcs don't climb away.
+- **Wall-running** (`physics/wallrun.js`): the hero stands on the facade (up = the face normal) and moves in its plane.
+  - Corners wrap onto the next face; topping out vaults onto the roof; Space kicks off.
+  - A fast, glancing contact becomes a horizontal wall-run.
+- **Manhattan** (`core/manhattan.js`, about 1:4 horizontally):
+  - The story grid stays untouched as the island core, and the random fill is only trimmed (shoreline, park, landmark plots).
+  - Added around it: uptown districts with wedding-cake setbacks, Billionaires' Row pencil towers, far-shore skylines in New Jersey and Brooklyn, piers, and crowns on tall towers.
+  - Landmarks are stacks of boxes, so they collide, anchor webs and can be wall-run. Their detail meshes (the Empire State mast and floodlit crown, the Chrysler terraces and spire, the twisted One WTC glass shaft) are render-only.
+  - The rivers, promenade, park and far shores are all drawn by the ground shader from the same shoreline formula the physics uses.

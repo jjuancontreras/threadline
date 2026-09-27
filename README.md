@@ -2,6 +2,8 @@
 
 A cinematic, scroll-driven, real-time WebGL story. **THREADRUNNER**, a tether-slinging hero wearing a fan-art recreation of Miguel O'Hara's **Spider-Man 2099** suit (Across the Spider-Verse look), stops a runaway maglev train after **GANTRY**, an original yellow-and-rust demolition mech with a single red sensor eye, is dropped onto the city from a city-sized carrier ship (along with a squad of differently-coloured units) and severs the track with a thrown cargo container.
 
+The city is a procedural Manhattan: the story's block grid is Midtown/Downtown on an island between the Hudson and the East River, with Central Park, the Upper West/East Sides, Billionaires' Row, Harlem, the Empire State Building, the Chrysler Building, One World Trade Center and the Brooklyn Bridge. Free mode runs a 4-minute day/night cycle.
+
 Everything is procedural: the city (instanced towers with glass-curtain or concrete facades, wet streets, signalled traffic and sidewalk crowds that scatter from impacts, water tanks, antennas, a cloud deck, fog, rain), both characters (built from primitives, animated with a pose library and procedural layers), the carrier ship, the train, the track and all FX. No models, textures or audio files are loaded.
 
 **Animation kit (THREADRUNNER):** corner perch, forward-diving swing, head-first dive, tether-firing (shoot), two-tether slingshot (pull), landing, brace, run cycle, and an acrobatics layer (front flip, back flip, corkscrew, twirl) applied in every free-flight gap. Pose changes cross-fade and body orientation is smoothed.
@@ -61,14 +63,15 @@ URL options: `?q=high|medium|low` forces a quality tier (and locks the adaptive 
 
 ```
 src/
-  core/        math, world layout, quality tiers + downgrade ladder, renderer + post chain, Lenis scroll,
+  core/        math, world layout, manhattan (island, park, districts, landmarks), day/night clock, quality tiers + downgrade ladder, renderer + post chain, Lenis scroll,
                shared uniforms, woff2 font loader, story/free-swing modes + rescue latch
   physics/     Verlet swinger, rope chain, anchor picking, slingshot + charged jump, pre-simulated swing path,
                rescue braking model
   characters/  rig helpers, sculpted anatomy, poses (+ mirrored left-hand variants), keyframed tricks,
                THREADRUNNER (2099 suit, cape), GANTRY (+ container), squad units
   scenes/      city, environment, traffic + crowd (renderers) over streetSim / pedSim (pure sims),
-               props + propLayout (lamps, barrels, cranes), free/moves (slingshot, pipe run, pole whirl),
+               props + propLayout (lamps, barrels, cranes), landmarks (ESB, Chrysler, One WTC, Brooklyn Bridge, park trees),
+               free/moves (slingshot, pipe run, pole whirl), free/wallMode,
                carrier, track, train, camera rig, director, cues,
                beats.js (every chapter timing in one place), chapters/*, free swing
   shaders/     tower windows + dynamic lights, sky, streets, lens effect (radial blur, speed lines, CA, flash)

@@ -199,6 +199,7 @@ export function createDirector(w) {
     w.shared.uGolden.value = sky.golden;
     w.shared.uSunDir.value.fromArray(sky.sunDir);
     w.shared.uMoonDir.value.fromArray(sky.moonDir);
+    w.shared.uFogDensity.value = 0.0019 - 0.0007 * sky.day; // clearer air by day
     fogColorFor(sky.lights, fogTmp, sky.day, sky.golden);
     w.shared.uFogColor.value.copy(fogTmp);
     w.lens.set('uBlur', ctx.fx.blur);

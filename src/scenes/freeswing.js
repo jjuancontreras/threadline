@@ -12,6 +12,7 @@ import { pickSwingAnchor, desiredDirection } from '../physics/anchors.js';
 import { pickSlingPair, jumpSpeed, jumpCharge, leftOf, SLINGSHOT } from '../physics/sling.js';
 import { enterWall, stepWall, wallJump } from '../physics/wallrun.js';
 import { wallFrame } from './free/wallMode.js';
+import { onLand, onFarShore } from '../core/manhattan.js';
 import { towersNear } from '../core/layout.js';
 import { vNorm, vAdd, vScale, vSub, vLen, vLerp, smoothstep, clamp, lerp } from '../core/math.js';
 import { TRICKS, trickAt, TRICK_TIME } from '../characters/tricks.js';
@@ -353,6 +354,16 @@ export function createFreeSwing({ towers, reduced, onMiss, onPrompt, props = nul
           stickToWall(t, Math.max(vLen([vBefore[0], 0, vBefore[2]]), 10)); // sprint into it: run straight up
           return;
         }
+      }
+      // no standing on the rivers: climb back out onto the promenade
+      if (s.grounded && s.groundY === 0 && !onLand(s.pos[0], s.pos[2]) && !onFarShore(s.pos[0], s.pos[2])) {
+        let x = s.pos[0];
+        const dir = x > 0 ? -1 : 1;
+        while (!onLand(x, s.pos[2], 5) && Math.abs(x) < 2000) x += dir * 2;
+        const z = onLand(x, s.pos[2], 5) ? s.pos[2] : Math.min(Math.max(s.pos[2], -1000), 1000);
+        toPhysics([x, 2, z], [dir * 4, 6, 0]);
+        stats.splashes = (stats.splashes || 0) + 1;
+        return;
       }
       if (s.grounded && !wasGrounded) {
         if (-vy > 7) landTime = time;

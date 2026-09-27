@@ -19,10 +19,14 @@ function buildTowers(towers, shared) {
   const m = new THREE.Matrix4();
   const r = rng(99);
   towers.forEach((t, i) => {
-    m.makeScale(t.w * 2, t.h, t.d * 2).setPosition(t.x, 0, t.z);
+    // physics-only boxes (the cores inside One WTC's glass shaft) are collapsed out of sight
+    if (t.hidden) m.makeScale(0, 0, 0).setPosition(t.x, 0, t.z);
+    else m.makeScale(t.w * 2, t.h, t.d * 2).setPosition(t.x, 0, t.z);
     mesh.setMatrixAt(i, m);
-    seeds[i] = r();
-    const tint = t.kind === 'spire' ? [0.5, 0.58, 0.72] : TINTS[Math.floor(r() * TINTS.length)];
+    const seed = r();
+    const pick = TINTS[Math.floor(r() * TINTS.length)];
+    seeds[i] = t.seed ?? seed; // landmarks pin masonry vs glass
+    const tint = t.tint ?? (t.kind === 'spire' ? [0.5, 0.58, 0.72] : pick);
     tints.set(tint, i * 3);
   });
   const seedAttr = new THREE.InstancedBufferAttribute(seeds, 1);

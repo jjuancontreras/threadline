@@ -137,7 +137,7 @@ const fragment = /* glsl */ `
     #pragma unroll_loop_end
 
     float fog = 1.0 - exp(-pow(depth * uFogDensity, 2.0));
-    float haze = (1.0 - smoothstep(0.0, 60.0, vWorld.y)) * smoothstep(40.0, 400.0, depth) * 0.55; // low street haze
+    float haze = (1.0 - smoothstep(0.0, 60.0, vWorld.y)) * smoothstep(40.0, 400.0, depth) * 0.55 * (1.0 - 0.7 * uDay); // low street haze
     gl_FragColor = vec4(mix(col, uFogColor, clamp(max(fog, haze), 0.0, 1.0)), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
