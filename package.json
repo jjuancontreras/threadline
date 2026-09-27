@@ -9,7 +9,8 @@
     "build": "vite build && node scripts/size.mjs",
     "preview": "vite preview --port 4173",
     "test": "node --test tests/*.test.js",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "share": "vite build && vite preview --host 0.0.0.0 --port 8080 --strictPort"
   },
   "dependencies": {
     "@fontsource/anton": "^5.3.0",
