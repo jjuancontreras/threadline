@@ -159,7 +159,7 @@ export function createThreadrunner() {
     /**
      * @param weights pose weights e.g. { swing: 1 }
      * @param dt seconds (for cross-fading)
-     * @param opts {{snap?:boolean, gait?:{phase:number, amount:number}}}
+     * @param opts {{snap?:boolean, gait?:{phase:number, amount:number, run?:number}}}
      */
     pose(weights, dt = 0, opts = {}) {
       time += dt;
@@ -168,10 +168,11 @@ export function createThreadrunner() {
       applyPoses(j, list.length ? list : [[POSES.stand, 1]]);
       j.spine.rotation.x += Math.sin(time * 2.1) * 0.025;
       j.head.rotation.y += Math.sin(time * 0.7) * 0.06;
-      let drop = (smoothed.crouch || 0) * 0.42 + (smoothed.perch || 0) * 0.46 + (smoothed.land || 0) * 0.36 + (smoothed.tuck || 0) * 0.1;
+      let drop = (smoothed.charge || 0) * 0.62 + (smoothed.crouch || 0) * 0.42 + (smoothed.perch || 0) * 0.46 + (smoothed.land || 0) * 0.36 + (smoothed.tuck || 0) * 0.1;
       if (opts.gait && opts.gait.amount > 0) {
-        const g = gaitOffsets(opts.gait.phase, opts.gait.amount);
-        for (const name of ['hipL', 'hipR', 'knL', 'knR', 'shL', 'shR']) j[name].rotation.x += g[name][0];
+        const g = gaitOffsets(opts.gait.phase, opts.gait.amount, opts.gait.run ?? 0);
+        for (const name of ['hipL', 'hipR', 'knL', 'knR', 'shL', 'shR', 'elL', 'elR']) j[name].rotation.x += g[name][0];
+        j.spine.rotation.y += g.spine[1];
         drop -= g.bounce;
       }
       body.position.y = -drop;
@@ -213,7 +214,10 @@ export function createThreadrunner() {
       if (snap || !primed || dt <= 0) baseQuat.copy(targetQuat);
       else baseQuat.slerp(targetQuat, 1 - Math.exp(-dt * TURN_RATE));
       root.quaternion.copy(baseQuat);
-      if (trick && trick.angle) {
+      if (trick?.quat) {
+        trickQuat.set(trick.quat[0], trick.quat[1], trick.quat[2], trick.quat[3]);
+        root.quaternion.premultiply(trickQuat);
+      } else if (trick && trick.angle) {
         axis.set(trick.axis[0], trick.axis[1], trick.axis[2]).normalize();
         trickQuat.setFromAxisAngle(axis, trick.angle);
         root.quaternion.premultiply(trickQuat);

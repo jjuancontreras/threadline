@@ -3,6 +3,8 @@
 import { samplePath } from '../../physics/swingPath.js';
 import { vNorm, vAdd, vScale, vSub, smoothstep, clamp, lerp } from '../../core/math.js';
 import { TRICKS, trickAt, trickWindow } from '../../characters/tricks.js';
+import { leftOf } from '../../physics/sling.js';
+import { vDot } from '../../core/math.js';
 
 const STILLS = 4; // reduced-motion: still framings with crossfades
 const SHOOT_TIME = 0.22; // seconds the firing arm stays snapped out after an attach
@@ -40,15 +42,18 @@ export function swing(ctx, p, dt) {
 
   const trick = reduced ? null : flightTrick(ctx, s, f);
   let weights;
+  // the hand on the anchor's side throws and holds the line
+  const hand = s.anchor && vDot(vSub(s.anchor, s.pos), leftOf(f.flat)) > 0 ? 'L' : 'R';
   if (s.anchor) {
     const shoot = 1 - smoothstep(0, SHOOT_TIME, sinceAttach);
-    weights = { swing: 1 - shoot * 0.7, shoot: shoot * 0.7 };
+    const [sw, sh] = hand === 'L' ? ['swingL', 'shootL'] : ['swing', 'shoot'];
+    weights = { [sw]: 1 - shoot * 0.7, [sh]: shoot * 0.7 };
   } else weights = trick ? trick.weights : { dive: 0.4 + (f.falling || 0) * 0.6, fly: 0.6 - (f.falling || 0) * 0.6 };
   ctx.setHero(s.pos, weights, { up: f.up, forward: f.forward, trick });
   if (!trick) ctx.hero.flutter(smoothstep(20, 50, s.speed));
   ctx.hero.pulse(0.4 + smoothstep(25, 50, s.speed));
 
-  if (s.anchor) ctx.tether(0, ctx.hero.hand(), s.anchor, { extend: clamp(sinceAttach / 0.14), intensity: 1.2 });
+  if (s.anchor) ctx.tether(0, ctx.hero.hand(hand), s.anchor, { extend: clamp(sinceAttach / 0.14), intensity: 1.2 });
 
   const speedK = reduced ? 0 : smoothstep(22, 52, s.speed);
   ctx.fx.lines = speedK;

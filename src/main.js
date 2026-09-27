@@ -177,7 +177,7 @@ function init() {
     hooks.downgraded = { dpr, post, shed };
   });
 
-  if (new URLSearchParams(location.search).has('debug')) hooks.debug = { scene: stage.scene, stage, world };
+  if (new URLSearchParams(location.search).has('debug')) hooks.debug = { scene: stage.scene, stage, world, free };
   Object.assign(hooks, {
     goto: (i, p = 0) => scroll.goto(i, p, true),
     enterFree,

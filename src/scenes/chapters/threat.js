@@ -4,6 +4,7 @@ import { smoothstep, invLerp, vLerp, vAdd, vSub, vScale, vNorm, vLen, lerp, clam
 import { WORLD } from '../../core/layout.js';
 import { closestOnTower } from '../../physics/anchors.js';
 import { trickAt } from '../../characters/tricks.js';
+import { strideLength } from '../../characters/poses.js';
 import { SHIP } from '../mothership.js';
 import { THREAT, SQUAD_DROPS } from '../beats.js';
 
@@ -76,7 +77,7 @@ function slingshot(ctx, p, end, endVel) {
     return {
       pos,
       weights: k < 0.25 ? { land: 1 } : running ? { run: 1 } : { crouch: 0.6, stand: 0.4 },
-      gait: running ? { phase: dist * 1.9, amount: 1 } : undefined,
+      gait: running ? { phase: (dist / strideLength(9)) * Math.PI * 2, amount: 1, run: 0.8 } : undefined,
       forward: vNorm(vSub(WATCH_SPOT, LAND_SPOT)),
       tethers: 0,
       speed: running ? 9 : 0,
