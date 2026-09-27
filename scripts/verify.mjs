@@ -96,6 +96,11 @@ async function freeSwing(page, vp) {
   await page.keyboard.down('KeyD');
   await sleep(600);
   await page.keyboard.up('KeyD');
+  // running off a roof edge is legitimate: keep sprinting (up to 8 s) until real distance is covered on foot
+  for (let t = 0; t < 8000; t += 250) {
+    if ((await hook(page, 't.free.groundDistance')) - groundStart > 12) break;
+    await sleep(250);
+  }
   await page.keyboard.up('ShiftLeft');
   await page.keyboard.up('KeyW');
   const stats = await hook(page, 't.free');
