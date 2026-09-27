@@ -14,6 +14,9 @@ export function createHud(root, reducedMotion) {
   const saved = q('[data-saved]');
   const slowmo = q('[data-slowmo]');
   const hint = q('[data-freeswing-hint]');
+  const prompt = q('[data-action-prompt]');
+  const promptLabel = q('[data-action-label]');
+  let lastPrompt = null;
   const call = q('.rescue-call');
   let lastSpeed = -1;
   let lastAlt = -1;
@@ -71,6 +74,14 @@ export function createHud(root, reducedMotion) {
     },
     freeSwingHint(on) {
       hint.hidden = !on;
+      if (!on) this.prompt(null);
+    },
+    /** Context action prompt ("E · PIPE RUN"), or null to hide. */
+    prompt(label) {
+      if (label === lastPrompt) return;
+      lastPrompt = label;
+      prompt.hidden = !label;
+      if (label) promptLabel.textContent = label;
     },
   };
 }

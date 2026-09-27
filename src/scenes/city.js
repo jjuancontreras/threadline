@@ -79,12 +79,18 @@ function instanced(geo, mat, placements) {
   return mesh;
 }
 
+/**
+ * Rooftop clutter. Besides the instance matrices it returns physics colliders (boxes the hero can
+ * land on, perch on and web to) and the antenna masts (poles the hero can whirl around).
+ */
 function buildRooftops(towers, detail) {
   const r = rng(4242);
   const tanks = [];
   const boxes = [];
   const masts = [];
   const beacons = [];
+  const colliders = [];
+  const poles = [];
   const m = () => new THREE.Matrix4();
   for (const t of towers) {
     if (t.kind === 'spire') continue;
@@ -93,13 +99,18 @@ function buildRooftops(towers, detail) {
       const x = t.x + (r() - 0.5) * t.w;
       const z = t.z + (r() - 0.5) * t.d;
       tanks.push(m().makeScale(1, 1, 1).setPosition(x, t.h, z));
+      colliders.push({ x, z, w: 2.3, d: 2.3, h: t.h + 8.3, kind: 'tank' });
     }
     if (r() < 0.6 * detail) {
       const n = 1 + Math.floor(r() * 3);
       for (let i = 0; i < n; i++) {
         const sx = 1.5 + r() * 3;
         const sz = 1.5 + r() * 3;
-        boxes.push(m().makeScale(sx, 1.2 + r(), sz).setPosition(t.x + (r() - 0.5) * (t.w * 2 - sx), t.h, t.z + (r() - 0.5) * (t.d * 2 - sz)));
+        const sy = 1.2 + r();
+        const bx = t.x + (r() - 0.5) * (t.w * 2 - sx);
+        const bz = t.z + (r() - 0.5) * (t.d * 2 - sz);
+        boxes.push(m().makeScale(sx, sy, sz).setPosition(bx, t.h, bz));
+        colliders.push({ x: bx, z: bz, w: sx / 2, d: sz / 2, h: t.h + sy, kind: 'unit' });
       }
     }
     if (t.h > 70 && r() < 0.55) {
@@ -107,10 +118,11 @@ function buildRooftops(towers, detail) {
       const x = t.x + (r() - 0.5) * t.w * 0.8;
       const z = t.z + (r() - 0.5) * t.d * 0.8;
       masts.push(m().makeScale(0.35, hgt, 0.35).setPosition(x, t.h, z));
+      poles.push({ x, z, base: t.h, top: t.h + hgt, kind: 'mast' });
       beacons.push(m().makeScale(0.9, 0.9, 0.9).setPosition(x, t.h + hgt, z));
     }
   }
-  return { tanks, boxes, masts, beacons };
+  return { tanks, boxes, masts, beacons, colliders, poles };
 }
 
 function tankGeometry() {
@@ -188,5 +200,5 @@ export function createCity(towers, shared, quality) {
   group.add(instanced(new THREE.SphereGeometry(0.5, 8, 6), beaconMaterial(shared), roofs.beacons));
   const spire = towers.find((t) => t.kind === 'spire');
   if (spire) group.add(buildSpire(spire));
-  return { group, update: (camPos) => built.sort(camPos) };
+  return { group, colliders: roofs.colliders, poles: roofs.poles, update: (camPos) => built.sort(camPos) };
 }

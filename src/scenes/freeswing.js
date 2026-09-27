@@ -26,7 +26,7 @@ const rotateY = (h, a) => vNorm([h[0] * Math.cos(a) - h[2] * Math.sin(a), 0, h[0
  * @param {{towers: object[], camera: THREE.Camera, canvas: HTMLElement, reduced: boolean,
  *   onMiss?: () => void, props?: {colliders: object[], actionNear?: Function}}} deps
  */
-export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, props = null }) {
+export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, onPrompt, props = null }) {
   const world = props?.colliders?.length ? [...towers, ...props.colliders] : towers;
   let s = createSwinger(SPAWN, SPAWN_VEL, DT);
   let prevPos = [...SPAWN];
@@ -53,6 +53,7 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, props
   let move = null; // scripted move (slingshot, pipe, pole…)
   let fade = null;
   let lastMoveEnd = -1;
+  let promptTimer = 0;
   const pointer = new THREE.Vector2(0, 0.25);
   const held = new Set();
   const ray = new THREE.Raycaster();
@@ -103,6 +104,7 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, props
     const prop = props?.actionNear?.(s.pos, heading, velocity(s, DT));
     if (prop) {
       move = prop.start(s.pos, velocity(s, DT));
+      onPrompt?.(null);
       stats.actions++;
     } else {
       const pair = pickSlingPair(s.pos, heading, near);
@@ -321,6 +323,15 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, props
       return chargeK();
     },
     press,
+    /** Put the hero somewhere (review scripts / debug). */
+    place(pos, vel = [0, 0, 0], face = null) {
+      s = createSwinger(pos, vel, DT);
+      prevPos = [...pos];
+      if (face) heading = vNorm([face[0], 0, face[2]]);
+      move = null;
+      trick = null;
+      near = towersNear(world, s.pos, 170);
+    },
     enter() {
       s = createSwinger(SPAWN, SPAWN_VEL, DT);
       prevPos = [...SPAWN];
@@ -334,6 +345,7 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, props
     },
     exit() {
       active = false;
+      onPrompt?.(null);
       holding = false;
       move = null;
       charge = null;
@@ -353,6 +365,12 @@ export function createFreeSwing({ towers, camera, canvas, reduced, onMiss, props
           ctx.shot(f.shot || chaseShot(f.pos, 0));
           return;
         }
+      }
+      // "E · PIPE RUN" when a usable prop is in reach (checked a few times a second)
+      promptTimer -= dt;
+      if (promptTimer <= 0 && props?.actionNear) {
+        promptTimer = 0.15;
+        onPrompt?.(props.actionNear(s.pos, heading)?.label ?? null);
       }
       if (holding && !s.anchor && ctx.time - lastTry > 0.25) {
         lastTry = ctx.time;

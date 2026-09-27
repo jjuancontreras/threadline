@@ -14,6 +14,7 @@ import { createTrack } from './scenes/track.js';
 import { createTrain } from './scenes/train.js';
 import { createTraffic } from './scenes/traffic.js';
 import { createCrowd } from './scenes/crowd.js';
+import { createProps } from './scenes/props.js';
 import { createMothership } from './scenes/mothership.js';
 import { GANTRY_SPOT } from './scenes/chapters/threat.js';
 import { createDirector } from './scenes/director.js';
@@ -71,13 +72,14 @@ function buildWorld(stage, quality) {
   };
   const city = createCity(towers, shared, quality);
   const traffic = createTraffic({ high: 2200, medium: 1100, low: 380 }[quality.tier], shared);
+  const props = createProps(towers, city);
   const crowd = createCrowd({ high: 2400, medium: 1200, low: 360 }[quality.tier], shared);
   const mothership = createMothership(shared, towers, GANTRY_SPOT);
   scene.add(env.group, city.group, track.group, train.group, hero.root, gantry.root, container, tethers.group);
   scene.add(bursts.dust.points, bursts.sparks.points, bursts.embers.points, bursts.puff.points, bursts.debris.mesh);
-  scene.add(traffic.group, crowd.group, mothership.group, ...gantry.lights);
+  scene.add(traffic.group, crowd.group, props.group, mothership.group, ...gantry.lights);
   scene.add(...hero.capeMeshes);
-  return { shared, towers, env, city, traffic, crowd, mothership, track, train, hero, gantry, container, tethers, bursts, pixel };
+  return { shared, towers, env, city, traffic, crowd, props, mothership, track, train, hero, gantry, container, tethers, bursts, pixel };
 }
 
 /** Compile every material up front so later chapters don't hitch on first reveal. */
@@ -152,6 +154,8 @@ function init() {
     camera: stage.camera,
     canvas,
     reduced,
+    props: world.props,
+    onPrompt: (label) => hud.prompt(label),
     onMiss: () => comic.word('NO ANCHOR', { x: 50, y: 30, color: '#9aa6b8', size: 0.35, tilt: 0 }),
   });
   hooks.free = free.stats;
@@ -239,6 +243,7 @@ function init() {
     world.city.update(stage.camera.position);
     world.traffic.update(dt * (reduced ? 0.6 : 1));
     world.crowd.update(dt * (reduced ? 0.6 : 1), world.traffic.clock);
+    world.props.update(time);
     const tB = performance.now();
     if (hooks.debug?.cam) {
       // ?debug only: orbit a fixed camera around the hero for turnaround captures
