@@ -41,15 +41,16 @@ URL options: `?q=high|medium|low` forces a quality tier (and locks the adaptive 
 | Story | `M` or the ♪ button | Toggle generative audio (muted by default) |
 | Chapter 5 | Click / tap a glowing anchor ring, or `Tab` to it and press `Enter` | Fire a tether; each anchor brakes the train. Anchors auto-fire after a timeout, so the story always resolves; **SKIP ›** fires them all at once |
 | After the rescue | `F`, the rail's **F** button, or "Enter free swing" | Free swing mode |
-| Free swing | Hold mouse button (or touch) | Fire a tether at the nearest building along the aim; the rope reels in while held |
-| Free swing | Release | Let go, keeping your momentum (an automatic flip or corkscrew at speed) |
-| Free swing | `W`/`S` on the ground | Run forward / back (on streets and rooftops) |
-| Free swing | `A`/`D` | Turn on the ground; steer in the air |
-| Free swing | `Shift` | Sprint |
-| Free swing | `Space` | Jump |
-| Free swing | `Q` | Aerial trick (flip, corkscrew, twirl) |
-| Free swing | `E` (hold) | Fire a tether straight ahead without the mouse; release to let go |
-| Free swing (touch) | On-screen pad ◀ ▲ ▶ · JUMP · WEB | Turn / run, jump, fire a tether ahead |
+| Free swing | Hold mouse button (or touch) | Fire a tether at the nearest building along the aim (the hand on that side throws it); the rope reels in while held |
+| Free swing | Release | Let go, keeping your momentum (a trick at speed: twisting flip, lazy roll, corkscrew, scissor kick, layout backflip) |
+| Free swing | `W` / `S` on the ground | Walk forward / back (streets and rooftops) |
+| Free swing | `Shift` + `W` | Run — builds from a jog to a 26 m/s bounding sprint |
+| Free swing | `A` / `D` | Turn on the ground; steer in the air |
+| Free swing | `Space` | Tap: hop (≈6 m). Hold: sink into a crouch while the camera shudders, release for a super jump (up to ≈47 m) |
+| Free swing | `E` | Web slingshot: a line from each hand to the buildings either side, stretch back, launch up and forward |
+| Free swing | `E` near a prop (prompt shows) | **Pipe run** through a crane's hanging pipe, or **pole whirl** around a lamp post / roof antenna |
+| Free swing | `Q` | Aerial trick |
+| Free swing (touch) | On-screen pad ◀ ▲ ▶ · JUMP (hold to charge) · WEB | Turn / walk, jump, slingshot / use prop |
 | Free swing | `Esc` or `F` | Back to the story |
 
 ## Structure
@@ -58,9 +59,12 @@ URL options: `?q=high|medium|low` forces a quality tier (and locks the adaptive 
 src/
   core/        math, world layout, quality tiers + downgrade ladder, renderer + post chain, Lenis scroll,
                shared uniforms, woff2 font loader, story/free-swing modes + rescue latch
-  physics/     Verlet swinger, rope chain, anchor picking, pre-simulated swing path, rescue braking model
-  characters/  rig helpers, poses, tricks, THREADRUNNER (2099 suit, cape), GANTRY (+ container), squad units
+  physics/     Verlet swinger, rope chain, anchor picking, slingshot + charged jump, pre-simulated swing path,
+               rescue braking model
+  characters/  rig helpers, sculpted anatomy, poses (+ mirrored left-hand variants), keyframed tricks,
+               THREADRUNNER (2099 suit, cape), GANTRY (+ container), squad units
   scenes/      city, environment, traffic + crowd (renderers) over streetSim / pedSim (pure sims),
+               props + propLayout (lamps, barrels, cranes), free/moves (slingshot, pipe run, pole whirl),
                carrier, track, train, camera rig, director, cues,
                beats.js (every chapter timing in one place), chapters/*, free swing
   shaders/     tower windows + dynamic lights, sky, streets, lens effect (radial blur, speed lines, CA, flash)
@@ -69,7 +73,8 @@ src/
   audio/       Web Audio engine (wind, pad, heartbeat, booms, zaps)
 scripts/       verify.mjs (Playwright), perf.mjs, gpubench.mjs, hero-shots.mjs, review-shots.mjs, size.mjs (bundle budget),
                sim-swing.mjs (path tuning), contact-sheet.mjs, lib/serve.mjs (shared static server)
-tests/         physics, quality ladder, story timing / tricks / gait / cues, modes, streets, pedestrians (node:test)
+tests/         physics, quality ladder, story timing / tricks / gait / cues, modes, streets, pedestrians,
+               slingshot / jump, props / pipe run / pole whirl (node:test)
 .github/       CI: unit tests + build + size budget
 ```
 
