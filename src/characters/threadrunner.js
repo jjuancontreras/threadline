@@ -3,9 +3,13 @@
 // forearm spikes, talons and tattered under-arm web-cape membranes. Personal, unpublished build.
 // Joint names/poses are unchanged, so every animation (swing, tricks, run, slingshot) still applies.
 import * as THREE from 'three';
-import { joint, capsule, box, applyPoses, orient } from './rig.js';
+import { joint, applyPoses, orient } from './rig.js';
+import {
+  TORSO, LIMB, torsoGeometry, pelvisGeometry, neckGeometry, deltoidGeometry,
+  upperArmGeometry, forearmGeometry, thighGeometry, shinGeometry, footGeometry, handGeometry,
+} from './anatomy.js';
 import { POSES, gaitOffsets } from './poses.js';
-import { SUIT, emblemTextures, faceTextures, torsoWrap, faceDecal, forearmSpikes, talons, addRim } from './suit2099.js';
+import { SUIT, emblemTextures, faceTextures, faceDecal, forearmSpikes, talons, addRim } from './suit2099.js';
 import { createCape } from './cape.js';
 
 export const NEON = SUIT.glow; // emblem/eye glow colour (pulsed by pulse())
@@ -17,57 +21,58 @@ function buildBody(m) {
   const body = new THREE.Group();
   root.add(body);
   const j = {};
-  body.add(box(0.36, 0.2, 0.22, m.suit));
+  const mesh = (geo, mat) => new THREE.Mesh(geo, mat);
+  body.add(mesh(pelvisGeometry(), m.suit));
   j.spine = joint(body, 0, 0.08, 0);
-  const torso = capsule(0.185, 0.34, m.suit);
-  torso.position.y = 0.3;
-  torso.scale.set(1.12, 1, 0.9); // broad, V-shaped
-  j.spine.add(torso, torsoWrap(m.emblem));
-  for (const side of [1, -1]) {
-    const trap = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), m.suit);
-    trap.position.set(side * 0.2, 0.55, -0.01);
-    trap.scale.set(1.1, 0.75, 0.95);
-    j.spine.add(trap);
-  }
+  // sculpted V-taper torso; the skull-spider emblem is UV-mapped straight onto it
+  j.spine.add(mesh(torsoGeometry(), m.emblem));
+  const neck = mesh(neckGeometry(), m.suit);
+  neck.position.y = TORSO.top - 0.05;
+  j.spine.add(neck);
 
-  j.head = joint(j.spine, 0, 0.68, 0);
-  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.13, 20, 16), m.suit);
-  helmet.scale.set(0.9, 1.1, 1.0);
+  j.head = joint(j.spine, 0, 0.76, 0);
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.13, 28, 20), m.suit);
+  helmet.scale.set(0.88, 1.1, 1.0);
   helmet.position.y = 0.12;
   const face = faceDecal(m.face);
   face.position.y = 0.12;
   face.scale.copy(helmet.scale);
-  j.head.add(helmet, face);
+  const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 10), m.suit);
+  jaw.scale.set(0.95, 0.75, 1.02);
+  jaw.position.set(0, 0.04, 0.02);
+  j.head.add(helmet, face, jaw);
 
   const feet = [];
   const markers = { L: {}, R: {} };
   const arm = (side, key) => {
-    const s = joint(j.spine, side * 0.26, 0.55, 0);
-    const delt = new THREE.Mesh(new THREE.SphereGeometry(0.078, 12, 8), m.suit);
-    s.add(delt, capsule(0.068, 0.24, m.suit));
-    const e = joint(s, 0, -0.31, 0);
-    e.add(capsule(0.058, 0.22, m.suit), forearmSpikes(side, m.dark, m.glow));
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.058, 10, 8), m.dark);
-    hand.position.y = -0.3;
+    const s = joint(j.spine, side * 0.3, 0.6, 0);
+    const delt = mesh(deltoidGeometry(), m.suit);
+    delt.position.set(side * 0.008, -0.045, 0);
+    s.add(delt, mesh(upperArmGeometry(side), m.suit));
+    const e = joint(s, 0, -LIMB.upperArm, 0);
+    e.add(mesh(forearmGeometry(side), m.suit), forearmSpikes(side, m.dark, m.glow));
+    const hand = mesh(handGeometry(), m.dark);
+    hand.position.y = -LIMB.forearm - 0.045;
     hand.add(talons(m.dark));
     e.add(hand);
-    markers[key].shoulder = joint(s, 0, -0.06, 0);
+    markers[key].shoulder = joint(s, 0, -0.07, 0);
     markers[key].elbow = joint(e, 0, 0, 0);
-    markers[key].wrist = joint(e, 0, -0.26, 0);
-    markers[key].armpit = joint(j.spine, side * 0.19, 0.44, -0.02);
-    markers[key].waist = joint(j.spine, side * 0.2, 0.16, -0.01);
-    markers[key].hip = joint(body, side * 0.17, -0.04, 0);
+    markers[key].wrist = joint(e, 0, -LIMB.forearm + 0.03, 0);
+    markers[key].armpit = joint(j.spine, side * 0.22, 0.47, -0.03);
+    markers[key].waist = joint(j.spine, side * 0.16, 0.14, -0.02);
+    markers[key].hip = joint(body, side * 0.16, -0.06, 0);
     return [s, e, hand];
   };
   const leg = (side) => {
-    const h = joint(body, side * 0.11, -0.06, 0);
-    h.add(capsule(0.088, 0.34, m.suit));
-    const k = joint(h, 0, -0.44, 0);
-    k.add(capsule(0.07, 0.34, m.suit));
-    const foot = box(0.11, 0.07, 0.25, m.dark, 0, -0.45, 0.05);
+    const h = joint(body, side * 0.108, -0.07, 0);
+    h.add(mesh(thighGeometry(side), m.suit));
+    const k = joint(h, 0, -LIMB.thigh, 0);
+    k.add(mesh(shinGeometry(), m.suit));
+    const foot = mesh(footGeometry(), m.dark);
+    foot.position.set(0, -LIMB.shin - 0.035, 0);
     for (const x of [-1, 0, 1]) {
-      const claw = new THREE.Mesh(new THREE.ConeGeometry(0.01, 0.05, 4), m.dark);
-      claw.position.set(x * 0.03, -0.46, 0.2);
+      const claw = new THREE.Mesh(new THREE.ConeGeometry(0.011, 0.055, 4), m.dark);
+      claw.position.set(x * 0.03, -LIMB.shin - 0.045, 0.24);
       claw.rotation.x = Math.PI / 2;
       k.add(claw);
     }

@@ -169,15 +169,6 @@ export function faceTextures() {
   return { map: texture(c), emissive: texture(e) };
 }
 
-/** Curved chest/back wrap that sits just outside the torso capsule. */
-export function torsoWrap(material) {
-  const geo = new THREE.CylinderGeometry(0.19, 0.176, 0.56, 40, 1, true, Math.PI, Math.PI * 2);
-  const m = new THREE.Mesh(geo, material);
-  m.position.y = 0.3;
-  m.scale.set(1.12, 1, 0.92);
-  return m;
-}
-
 /** Face decal: front hemisphere slightly outside the helmet sphere. */
 export function faceDecal(material) {
   const geo = new THREE.SphereGeometry(0.1335, 36, 24, 0, Math.PI, 0.2, Math.PI * 0.75);
