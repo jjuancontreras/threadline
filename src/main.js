@@ -69,7 +69,7 @@ function buildWorld(stage, quality) {
     debris: createDebris(Math.round(70 * Math.max(pc, 0.5))),
   };
   const city = createCity(towers, shared, quality);
-  const traffic = createTraffic({ high: 320, medium: 190, low: 80 }[quality.tier], shared);
+  const traffic = createTraffic({ high: 2200, medium: 1100, low: 380 }[quality.tier], shared);
   const mothership = createMothership(shared, towers, GANTRY_SPOT);
   scene.add(env.group, city.group, track.group, train.group, hero.root, gantry.root, container, tethers.group);
   scene.add(bursts.dust.points, bursts.sparks.points, bursts.embers.points, bursts.puff.points, bursts.debris.mesh);
@@ -234,7 +234,7 @@ function init() {
     }
     world.env.update(time, stage.camera.position, director.ctx.night);
     world.city.update(stage.camera.position);
-    world.traffic.update(time * (reduced ? 0.6 : 1));
+    world.traffic.update(dt * (reduced ? 0.6 : 1));
     const tB = performance.now();
     if (hooks.debug?.cam) {
       // ?debug only: orbit a fixed camera around the hero for turnaround captures
@@ -242,6 +242,10 @@ function init() {
       const h = world.hero.root.position;
       stage.camera.position.set(h.x + Math.sin(yaw) * dist, h.y + height, h.z + Math.cos(yaw) * dist);
       stage.camera.lookAt(h.x, h.y + 0.3, h.z);
+    } else if (hooks.debug?.fixed) {
+      // ?debug only: park the camera anywhere (street-life review shots)
+      stage.camera.position.fromArray(hooks.debug.fixed.pos);
+      stage.camera.lookAt(...hooks.debug.fixed.look);
     }
     stage.render(dt);
     const tC = performance.now();

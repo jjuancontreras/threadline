@@ -1,23 +1,14 @@
-// Street traffic: instanced cars (body, cabin, head/tail lights) driving the street grid,
-// plus additive headlight pools on the asphalt. One matrix update per car per frame.
+// Street traffic: instanced cars (body, cabin, head/tail lights) driven by the street-life
+// simulation (car following + signalled crossings), plus additive headlight pools and brake lights.
 import * as THREE from 'three';
 import { rng } from '../core/math.js';
 import { mergeSimple } from './city.js';
-import { STREETS } from '../core/layout.js';
+import { createTrafficSim } from './streetSim.js';
 
 const PAINTS = [
   [0.05, 0.05, 0.06], [0.12, 0.12, 0.13], [0.35, 0.36, 0.38], [0.02, 0.03, 0.06],
   [0.28, 0.03, 0.03], [0.05, 0.08, 0.2], [0.55, 0.55, 0.56], [0.08, 0.06, 0.05],
 ];
-
-function lanes() {
-  const out = [];
-  const { avenueLanes, crossZ, alongX, halfLane, extentX, extentZ } = STREETS;
-  for (const [x, dir] of avenueLanes) out.push({ axis: 'z', c: x, dir, min: extentZ[0], max: extentZ[1] });
-  for (const z of crossZ) for (const dir of [-1, 1]) out.push({ axis: 'x', c: z + dir * halfLane, dir, min: extentX[0], max: extentX[1] });
-  for (const x of alongX) for (const dir of [-1, 1]) out.push({ axis: 'z', c: x - dir * halfLane, dir, min: extentZ[0], max: extentZ[1] });
-  return out;
-}
 
 function carGeometry() {
   const parts = [
@@ -41,12 +32,15 @@ function carGeometry() {
 const carVertex = /* glsl */ `
   attribute float aKind;
   attribute vec3 aPaint;
+  attribute float aBrake;
   varying float vKind;
+  varying float vBrake;
   varying vec3 vPaint;
   varying vec3 vNormal;
   varying vec3 vWorld;
   void main() {
     vKind = aKind;
+    vBrake = aBrake;
     vPaint = aPaint;
     vec4 w = modelMatrix * instanceMatrix * vec4(position, 1.0);
     vWorld = w.xyz;
@@ -58,6 +52,7 @@ const carFragment = /* glsl */ `
   uniform vec3 uFogColor;
   uniform float uFogDensity;
   varying float vKind;
+  varying float vBrake;
   varying vec3 vPaint;
   varying vec3 vNormal;
   varying vec3 vWorld;
@@ -69,7 +64,7 @@ const carFragment = /* glsl */ `
     if (vKind < 0.5) col = vPaint * (0.1 + 0.25 * max(n.y, 0.0)) + vec3(0.12, 0.1, 0.14) * fres * 0.6;
     else if (vKind < 1.5) col = vec3(0.01, 0.012, 0.018) + vec3(0.25, 0.2, 0.3) * fres;
     else if (vKind < 2.5) col = vec3(3.2, 2.9, 2.4);
-    else col = vec3(2.6, 0.08, 0.05);
+    else col = vec3(2.6, 0.08, 0.05) * (1.0 + vBrake * 1.8); // brake lights flare
     float depth = length(vWorld - cameraPosition);
     float fog = 1.0 - exp(-pow(depth * uFogDensity, 2.0));
     gl_FragColor = vec4(mix(col, uFogColor, clamp(fog, 0.0, 1.0)), 1.0);
@@ -93,18 +88,19 @@ const poolFragment = /* glsl */ `
   }
 `;
 
-export function createTraffic(count, shared) {
+export function createTraffic(requested, shared) {
   const r = rng(2024);
-  const all = lanes();
-  const cars = Array.from({ length: count }, () => {
-    const lane = all[Math.floor(r() * all.length)];
-    return { lane, s0: lane.min + r() * (lane.max - lane.min), v: 7 + r() * 9 };
-  });
+  const sim = createTrafficSim(requested);
+  const { cars } = sim;
+  const count = cars.length;
+  const brake = new THREE.InstancedBufferAttribute(new Float32Array(count), 1);
+  brake.setUsage(THREE.DynamicDrawUsage);
   const paint = new Float32Array(count * 3);
   cars.forEach((_, i) => paint.set(PAINTS[Math.floor(r() * PAINTS.length)], i * 3));
 
   const geo = carGeometry();
   geo.setAttribute('aPaint', new THREE.InstancedBufferAttribute(paint, 3));
+  geo.setAttribute('aBrake', brake);
   const uniforms = { uFogColor: shared.uFogColor, uFogDensity: shared.uFogDensity };
   const bodies = new THREE.InstancedMesh(geo, new THREE.ShaderMaterial({ vertexShader: carVertex, fragmentShader: carFragment, uniforms }), count);
   const poolGeo = new THREE.PlaneGeometry(16, 7).rotateX(-Math.PI / 2).translate(10.2, 0.06, 0);
@@ -125,7 +121,7 @@ export function createTraffic(count, shared) {
   const group = new THREE.Group();
   group.add(bodies, pools);
   const m = new THREE.Matrix4();
-  const rot = new THREE.Matrix4();
+  let clock = 0;
 
   let active = count;
   return {
@@ -136,20 +132,24 @@ export function createTraffic(count, shared) {
       bodies.count = active;
       pools.count = active;
     },
-    update(time) {
+    /** Advance the simulation by dt seconds (the whole fleet keeps moving; only `active` are drawn). */
+    update(dt) {
+      clock += dt;
+      sim.step(dt, clock);
       for (let i = 0; i < active; i++) {
-        const c = cars[i];
-        const L = c.lane;
-        const span = L.max - L.min;
-        const s = L.min + ((((c.s0 - L.min + c.v * time * L.dir) % span) + span) % span);
-        const yaw = L.axis === 'x' ? (L.dir > 0 ? 0 : Math.PI) : L.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
-        rot.makeRotationY(yaw);
-        m.copy(rot).setPosition(L.axis === 'x' ? s : L.c, 0, L.axis === 'x' ? L.c : s);
+        const [x, z, yaw] = sim.pose(cars[i]);
+        m.makeRotationY(yaw).setPosition(x, 0, z);
         bodies.setMatrixAt(i, m);
         pools.setMatrixAt(i, m);
+        brake.array[i] = cars[i].braking;
       }
       bodies.instanceMatrix.needsUpdate = true;
       pools.instanceMatrix.needsUpdate = true;
+      brake.needsUpdate = true;
+    },
+    /** Signal clock (seconds) so pedestrians can share the same cycle. */
+    get clock() {
+      return clock;
     },
   };
 }
