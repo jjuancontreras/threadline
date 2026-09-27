@@ -194,6 +194,7 @@ function animateUnit({ unit, dust, heading }, roof, drop, startY, time, i) {
   const landed = clamp(age / SQUASH_LIFE);
   unit.scale.set(1.15, 1.15 * (1 - 0.14 * Math.sin(landed * Math.PI)), 1.15);
   unit.rotation.y = heading + Math.sin(time * 0.35 + i * 1.7) * 0.35 * landed;
+  unit.userData.blink(time, i * 1.3);
   const d = age > 0 && age < DUST_LIFE ? age / DUST_LIFE : -1;
   dust.visible = d >= 0;
   if (d < 0) return;

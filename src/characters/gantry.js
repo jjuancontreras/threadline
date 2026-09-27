@@ -57,6 +57,8 @@ export function createGantry() {
   const chrome = new THREE.MeshStandardMaterial({ color: 0xdfe4ea, roughness: 0.25, metalness: 0.55 });
   const hazard = new THREE.MeshStandardMaterial({ map: hazardTexture(), roughness: 0.6 });
   const eyeMat = new THREE.MeshBasicMaterial({ color: EYE_ON.clone() });
+  const heatMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 0.7, 0.2) });
+  const beaconMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.1, 0.1) });
 
   const root = new THREE.Group();
   const hips = new THREE.Group();
@@ -72,13 +74,24 @@ export function createGantry() {
     const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.25, 1.8, 8), steel);
     stack.position.set(s * 1.2, 3.6, -1.1);
     j.torso.add(stack);
+    // exhaust glow in the stack mouth (flickers with the idle engine, see pose())
+    const heat = new THREE.Mesh(new THREE.CircleGeometry(0.2, 10), heatMat);
+    heat.rotation.x = -Math.PI / 2;
+    heat.position.set(s * 1.2, 4.51, -1.1);
+    j.torso.add(heat);
   }
+  // armour detail: back plate, rivet strips, amber hazard beacon on the cab roof
+  j.torso.add(box(3.4, 2.2, 0.25, steel, 0, 1.7, -1.5));
+  for (const y of [0.7, 2.7]) j.torso.add(box(4.05, 0.12, 2.85, steel, 0, y, 0));
   // cab with single sensor eye
   const cab = joint(j.torso, 0, 3.1, 0.5);
   cab.add(box(1.8, 1.1, 1.5, yellow, 0, 0.5, 0), box(1.3, 0.45, 0.2, steel, 0, 0.55, 0.78));
   const eye = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), eyeMat);
   eye.position.set(0, 0.55, 0.9);
   cab.add(eye);
+  const beacon = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.28, 10), beaconMat);
+  beacon.position.set(0.55, 1.2, -0.4);
+  cab.add(beacon);
   // Lights live at scene level (see `lights`) and follow these markers: hiding GANTRY must not
   // change the scene's light count, or every lit material recompiles mid-story (a visible hitch).
   const eyeLight = new THREE.PointLight(0xff2a1a, 0, 22, 2);
@@ -125,6 +138,7 @@ export function createGantry() {
   const workMarker = joint(root, 0, 12, 9);
 
   let time = 0;
+  let power = 1; // 0 once GANTRY is shut down after the rescue
   const _v = new THREE.Vector3();
   return {
     root,
@@ -137,6 +151,7 @@ export function createGantry() {
      */
     syncLights(visible, eye = 1) {
       eyeMat.color.copy(EYE_ON).multiplyScalar(0.04 + 0.96 * eye);
+      power = eye;
       eyeLight.intensity = visible ? 10 * eye : 0;
       work.intensity = visible ? 90 : 0;
       if (!visible) return;
@@ -150,6 +165,9 @@ export function createGantry() {
       applyPoses(j, list.length ? list : [[POSES.idle, 1]]);
       j.torso.rotation.z += Math.sin(time * 1.3) * 0.02;
       cab.rotation.y = Math.sin(time * 0.5) * 0.25 * (weights.idle || 0);
+      // engine flicker + a rotating-beacon pulse; both die with the sensor eye (see syncLights)
+      heatMat.color.setRGB(2.2, 0.7, 0.2).multiplyScalar(power * (0.75 + 0.25 * Math.sin(time * 23) * Math.sin(time * 7.3)));
+      beaconMat.color.setRGB(2.4, 1.1, 0.1).multiplyScalar(power * (0.15 + 0.85 * Math.max(0, Math.sin(time * 5))));
       hips.position.y = 4.2 - (weights.land || 0) * 1.6;
     },
     /** Midpoint between the claws — where the container is carried. */
