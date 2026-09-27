@@ -108,6 +108,10 @@ export function createDirector(w) {
       w.hero.syncCape(ctx.time, Math.min(1, (weights.swing || 0) + (weights.dive || 0) + (weights.fly || 0)));
       setLight(w.shared, LIGHT.hero, root.position.toArray(), 10, [1, 0.1, 0.06], 0.1);
     },
+    /** Street crowds within radius run from an impact. */
+    scatter(center, radius) {
+      w.crowd.scatter(center, radius, 12);
+    },
     /** Show/hide the hero and the world-space cape together. */
     showHero(visible) {
       w.hero.root.visible = visible;

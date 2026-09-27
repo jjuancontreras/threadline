@@ -127,3 +127,9 @@ At the owner's request, for a private, unpublished build, the hero now wears a r
 - Cone forearm spikes, talons and toe claws.
 - Two under-arm membranes rebuilt in world space every frame from joint markers (shoulder/elbow/wrist to armpit/waist/hip), with a saw-tooth tattered edge that flutters at speed.
 - The joint rig, pose library, tricks and gait are untouched, so every animation carries over.
+
+## 10. Revision 4 (2026-09-27): busy street life
+
+- **Traffic** (`scenes/streetSim.js`): cars follow each other with the Intelligent Driver Model (Treiber, Hennecke & Helbing 2000), which gives smooth gap-keeping and queues without collision code. One signal cycle serves the whole grid (north-south vs east-west phases with all-red gaps); a red stop line is treated as a stopped leading car, and cars too close to stop comfortably carry on through (amber rule). Tail lights flare while braking or queued.
+- **Pedestrians** (`scenes/pedSim.js`, `scenes/crowd.js`): people walk the sidewalk centre-lines either side of every street, wait at the kerb until the parallel traffic has green, and turn back once they stray from a home range, which keeps the crowd dense in the blocks the story camera sees. About 14% stand still and 30% carry umbrellas. GANTRY's landing and the container impact scatter everyone within 80–90 m at a sprint.
+- **Cost**: both sims are pure JS with unit tests. Instanced drawing is two draw calls for traffic and one for crowds, and the walk cycle runs in the vertex shader. Counts scale by tier (cars 2200/1100/380, people 2400/1200/360), and the adaptive-quality floor keeps about a third of each.

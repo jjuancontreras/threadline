@@ -67,6 +67,7 @@ export function impact(ctx, p) {
     ctx.comic.flash(1.4);
     ctx.shake.add(1);
     ctx.audio.boom(1.5);
+    ctx.scatter(IMPACT_POINT, 80);
   });
   ctx.cue('hurl', tau > RELEASE, () => ctx.audio.boom(0.4));
 

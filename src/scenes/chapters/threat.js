@@ -133,6 +133,7 @@ export function threat(ctx, p) {
     ctx.comic.flash(1.2);
     ctx.shake.add(0.95);
     ctx.audio.boom(1.2);
+    ctx.scatter(GANTRY_SPOT, 90); // the street below GANTRY's roof empties
   });
   ctx.cue('arrive', p > B.arrive, () => ctx.audio.boom(0.5));
   ctx.shot(threatShot(p, h, y, ship));

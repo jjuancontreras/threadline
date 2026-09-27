@@ -2,7 +2,7 @@
 
 A cinematic, scroll-driven, real-time WebGL story. **THREADRUNNER**, a tether-slinging hero wearing a fan-art recreation of Miguel O'Hara's **Spider-Man 2099** suit (Across the Spider-Verse look), stops a runaway maglev train after **GANTRY**, an original yellow-and-rust demolition mech with a single red sensor eye, is dropped onto the city from a city-sized carrier ship (along with a squad of differently-coloured units) and severs the track with a thrown cargo container.
 
-Everything is procedural: the city (instanced towers with glass-curtain or concrete facades, wet streets, moving traffic, water tanks, antennas, a cloud deck, fog, rain), both characters (built from primitives, animated with a pose library and procedural layers), the carrier ship, the train, the track and all FX. No models, textures or audio files are loaded.
+Everything is procedural: the city (instanced towers with glass-curtain or concrete facades, wet streets, signalled traffic and sidewalk crowds that scatter from impacts, water tanks, antennas, a cloud deck, fog, rain), both characters (built from primitives, animated with a pose library and procedural layers), the carrier ship, the train, the track and all FX. No models, textures or audio files are loaded.
 
 **Animation kit (THREADRUNNER):** corner perch, forward-diving swing, head-first dive, tether-firing (shoot), two-tether slingshot (pull), landing, brace, run cycle, and an acrobatics layer (front flip, back flip, corkscrew, twirl) applied in every free-flight gap. Pose changes cross-fade and body orientation is smoothed.
 
@@ -60,15 +60,16 @@ src/
                shared uniforms, woff2 font loader, story/free-swing modes + rescue latch
   physics/     Verlet swinger, rope chain, anchor picking, pre-simulated swing path, rescue braking model
   characters/  rig helpers, poses, tricks, THREADRUNNER (2099 suit, cape), GANTRY (+ container), squad units
-  scenes/      city, environment, traffic, carrier, track, train, camera rig, director, cues,
+  scenes/      city, environment, traffic + crowd (renderers) over streetSim / pedSim (pure sims),
+               carrier, track, train, camera rig, director, cues,
                beats.js (every chapter timing in one place), chapters/*, free swing
   shaders/     tower windows + dynamic lights, sky, streets, lens effect (radial blur, speed lines, CA, flash)
   fx/          tethers (ribbon + Verlet), particle bursts and debris, trauma camera shake
   ui/          HUD, comic impact words and halftone, nav rail, title reveal, rescue anchor buttons, touch pad
   audio/       Web Audio engine (wind, pad, heartbeat, booms, zaps)
-scripts/       verify.mjs (Playwright), perf.mjs, gpubench.mjs, hero-shots.mjs, size.mjs (bundle budget),
+scripts/       verify.mjs (Playwright), perf.mjs, gpubench.mjs, hero-shots.mjs, review-shots.mjs, size.mjs (bundle budget),
                sim-swing.mjs (path tuning), contact-sheet.mjs, lib/serve.mjs (shared static server)
-tests/         physics, quality ladder, story timing / tricks / gait / cues, modes (node:test)
+tests/         physics, quality ladder, story timing / tricks / gait / cues, modes, streets, pedestrians (node:test)
 .github/       CI: unit tests + build + size budget
 ```
 
@@ -85,6 +86,7 @@ Every source file is under 500 lines. See [RESEARCH.md](RESEARCH.md) for the sta
   - Shaders are precompiled, and GANTRY's lights stay in the scene at zero intensity, so the light count never changes and nothing recompiles mid-story.
   - Free-swing physics is interpolated between fixed 120 Hz steps.
   - The chapter 2 swing path is stored at 60 Hz and sampled with Catmull-Rom.
+  - Street life is simulated on the CPU (about 0.1 ms per frame for 2,200 cars) and drawn as two instanced meshes; the pedestrian walk cycle runs in the vertex shader, so the CPU uploads only a matrix, phase and gait per person.
 
 ## Accessibility and resilience
 
