@@ -8,6 +8,16 @@ Everything is procedural: the city (instanced towers with glass-curtain or concr
 
 **Animation kit (THREADRUNNER):** corner perch, forward-diving swing, head-first dive, tether-firing (shoot), two-tether slingshot (pull), landing, brace, run cycle, and an acrobatics layer (front flip, back flip, corkscrew, twirl) applied in every free-flight gap. Pose changes cross-fade and body orientation is smoothed.
 
+## Why I built it
+
+A personal experiment to see how far **AI-assisted (agentic) coding** can push a
+real-time 3D web experience with zero imported assets. I directed the design,
+story beats and feel, then reviewed and play-tested each iteration. Claude Code
+wrote much of the three.js, physics and shader code under that review, and
+performance was checked against a bundle-size budget (`scripts/size.mjs`).
+
+**Stack:** three.js · anime.js · Vite · JavaScript · WebGL/GLSL
+
 ## Run
 
 ```bash
